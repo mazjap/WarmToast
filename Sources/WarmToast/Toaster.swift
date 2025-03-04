@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-struct Toaster<Toast: View, Bread: Equatable, S: ShapeStyle>: ViewModifier {
+struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
     @Binding private var bread: Bread?
     @State private var offset = Double.zero
     
@@ -74,5 +74,46 @@ struct Toaster<Toast: View, Bread: Equatable, S: ShapeStyle>: ViewModifier {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay(toastView.zIndex(advancedOptions.customToastZIndex), alignment: .top)
         }
+    }
+}
+
+struct Toaster_Previews: PreviewProvider {
+    struct ToasterPreviewView: View {
+        @State var message: String?
+        
+        var body: some View {
+            VStack {
+                Spacer()
+                
+                HStack {
+                    Spacer()
+                    
+                    Button(message == nil ? "Show toaster" : "Clear toaster") {
+                        if message == nil {
+                            message = ["Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World", "The fitness graham pacer test", "Uh oh, something went wrong", "I like trains"].randomElement()!
+                        } else {
+                            message = nil
+                        }
+                    }
+                    
+                    Spacer()
+                }
+                
+                Spacer()
+            }
+            .background(Color.orange)
+            .edgesIgnoringSafeArea(.all)
+            .preheatToaster(
+                withBread: $message,
+                options: .toasterStrudel(type: .info, duration: .seconds(5))
+            ) { message in
+                Text(message)
+                    .font(.title)
+            }
+        }
+    }
+    
+    static var previews: some View {
+        ToasterPreviewView()
     }
 }
