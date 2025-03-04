@@ -7,14 +7,16 @@ struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
     
     private let options: ToasterSettings<S>
     private let advancedOptions: ToasterInternals
+    private let id: UUID?
     private let toast: (Bread) -> Toast
     private let timer: AnyPublisher<Timer.TimerPublisher.Output, Timer.TimerPublisher.Failure>
     
-    init(bread: Binding<Bread?>, options: ToasterSettings<S>, advancedOptions: ToasterInternals, toast: @escaping (Bread) -> Toast) {
+    init(bread: Binding<Bread?>, options: ToasterSettings<S>, advancedOptions: ToasterInternals, id: UUID?, toast: @escaping (Bread) -> Toast) {
         self._bread = bread
         self.toast = toast
         self.options = options
         self.advancedOptions = advancedOptions
+        self.id = id
         self.timer = Timer.TimerPublisher(interval: options.timeTilToasted.timeInterval, tolerance: 0.1, runLoop: .main, mode: .common, options: nil).autoconnect().eraseToAnyPublisher()
     }
     
@@ -38,6 +40,7 @@ struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 )
+                .id(id?.uuidString ?? "toast")
                 .offset(y: offset)
                 .gesture(DragGesture()
                     .onChanged { value in
@@ -105,7 +108,8 @@ struct Toaster_Previews: PreviewProvider {
             .edgesIgnoringSafeArea(.all)
             .preheatToaster(
                 withBread: $message,
-                options: .toasterStrudel(type: .info, duration: .seconds(5))
+                options: .toasterStrudel(type: .info, duration: .seconds(5)),
+                toastId: UUID()
             ) { message in
                 Text(message)
                     .font(.title)

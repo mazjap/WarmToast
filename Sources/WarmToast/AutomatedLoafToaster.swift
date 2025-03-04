@@ -4,16 +4,13 @@ import Combine
 struct AutomatedLoafToaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
     @State private var isAppearing = true
     @State private var currentlyToasting: Bread? = nil
+    @State private var id: UUID? = nil
     @Binding private var loaf: [Bread]
     
     private let options: ToasterSettings<S>
     private let advancedOptions: ToasterInternals
     private let durationBetweenToasts: TimeInterval
     private let toast: (Bread) -> Toast
-    
-    private var wholeLoaf: [Bread] {
-        currentlyToasting.map { [$0] + loaf } ?? loaf
-    }
     
     init(loaf: Binding<[Bread]>, options: ToasterSettings<S>, advancedOptions: ToasterInternals, durationBetweenToasts: TimeInterval, toast: @escaping (Bread) -> Toast) {
         self._loaf = loaf
@@ -24,22 +21,32 @@ struct AutomatedLoafToaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
     }
     
     func body(content: Content) -> some View {
+        let breadBinding = Binding {
+            currentlyToasting
+        } set: {
+            currentlyToasting = $0
+            
+            if currentlyToasting == nil {
+                id = nil
+            }
+        }
+        
         content
             .modifier(Toaster(
-                bread: $currentlyToasting,
+                bread: breadBinding,
                 options: options,
                 advancedOptions: advancedOptions,
+                id: id,
                 toast: toast
             ))
             .onAppear {
                 isAppearing = false
                 if !loaf.isEmpty {
-                    print("making more toast")
                     currentlyToasting = loaf.remove(at: 0)
                 }
             }
             // Not ideal, body is called each time the view is redrawn, but onChange isn't supported on iOS 13 :(
-            .onReceive(Just(wholeLoaf)) { _ in
+            .onReceive(Just(loaf)) { _ in
                 if currentlyToasting == nil && !loaf.isEmpty && !isAppearing {
                     makeMoreToast()
                 }
@@ -49,7 +56,8 @@ struct AutomatedLoafToaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
     private func makeMoreToast() {
         DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) {
             if !loaf.isEmpty {
-                currentlyToasting = loaf.remove(at: 0)
+                currentlyToasting = loaf.removeFirst()
+                id = UUID()
             }
         }
     }
@@ -68,8 +76,14 @@ struct AutomatedLoafToaster_Previews: PreviewProvider {
                     
                     Button(messages.isEmpty ? "Populate toaster" : "Clear toaster") {
                         if messages.isEmpty {
-                            messages = ["Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World", "The fitness graham pacer test", "Uh oh, something went wrong", "I like trains"]
-                            print(messages)
+                            messages = Bool.random() ? [
+                                "Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World",
+                                "The fitness graham pacer test",
+                                "Uh oh, something went wrong",
+                                "I like trains"
+                            ] : (1...20).map {
+                                String($0)
+                            }
                         } else {
                             messages = []
                         }
@@ -84,7 +98,7 @@ struct AutomatedLoafToaster_Previews: PreviewProvider {
             .edgesIgnoringSafeArea(.all)
             .preheatToaster(
                 withLoaf: $messages,
-                options: .toasterStrudel(type: .info, duration: .seconds(5))
+                options: .toasterStrudel(type: .info, duration: .seconds(1))
             ) { message in
                 Text(message)
                     .font(.title)
