@@ -26,16 +26,16 @@ public struct ToasterSettings<S: ShapeStyle>: Sendable {
     
     /// ToasterSettings initializer. Also see the static properties such as: `ToasterStrudel` for built in options.
     /// - Parameters:
-    ///   - duration: The duration that the toast is shown on screen in seconds. Use `PresentedDuration.indefinite` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
+    ///   - timeTilToasted: The duration that the toast is shown on screen in seconds. Use `PresentedDuration.indefinite` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
     ///   - accentColor: Color applied to the leading edge of the toast. No leading edge color will be shown if nil is provided.
-    ///   - backgroundColor: The background color of the toast. Defaults to `Color.white`. `Color.clear` can be used as fits your needs.
+    ///   - background: The background of the toast. Defaults to `Color.warmToastDefaultBackgroundColor`. `Color.clear` can be used as fits your needs. `warmToastDefaultBackgroundColor` is `UIColor.systemBackground` on iOS/tvOS and `NSColor.windowBackgroundColor` on macOS.
     ///   - presentationStyle: The method with which to insert the toast into the world. `PresentationStyle.slide` will be used if none is provided.
     ///   - animation: The animation to use when presenting the toast.
     ///   - isSwipable: Whether swipe-to-dismiss is enabled on the toast. Defaults to true.
     public init(
         timeTilToasted: PresentedDuration,
         accentColor: Color? = nil,
-        background: S = Color.white,
+        background: S = Color.warmToastDefaultBackgroundColor,
         presentationStyle: PresentationStyle = .slide,
         animation: Animation? = nil,
         isSwipable: Bool = true
@@ -54,9 +54,9 @@ public struct ToasterSettings<S: ShapeStyle>: Sendable {
 extension ToasterSettings {
     /// ToasterSettings initializer. Also see the static methods such as: `toasterStrudel` for built in options.
     /// - Parameters:
-    ///   - duration: The duration that the toast is shown on screen. Use `PresentedDuration.indefinite` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
+    ///   - timeTilToasted: The duration that the toast is shown on screen. Use `PresentedDuration.indefinite` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
     ///   - accentColor: Color applied to the leading edge of the toast. No leading edge color will be shown if nil is provided.
-    ///   - backgroundColor: The background color of the toast. Defaults to `Color.white`. `Color.clear` can be used as fits your needs.
+    ///   - background: The background of the toast. Defaults to `Color.warmToastDefaultBackgroundColor`. `Color.clear` can be used as fits your needs. `warmToastDefaultBackgroundColor` is `UIColor.systemBackground` on iOS/tvOS and `NSColor.windowBackgroundColor` on macOS.
     ///   - presentationStyle: The method with which to insert the toast into the world. `PresentationStyle.slide` will be used if none is provided.
     ///   - animation: The animation to use when presenting the toast.
     ///   - isSwipable: Whether swipe-to-dismiss is enabled on the toast. Defaults to true.
