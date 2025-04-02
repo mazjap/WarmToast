@@ -41,24 +41,30 @@ struct AutomatedLoafToaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
             ))
             .onAppear {
                 isAppearing = false
-                if !loaf.isEmpty {
-                    currentlyToasting = loaf.remove(at: 0)
-                }
+                decideWhetherToMakeMoreToastNowOrLater()
             }
             // Not ideal, body is called each time the view is redrawn, but onChange isn't supported on iOS 13 :(
             .onReceive(Just(loaf)) { _ in
                 if currentlyToasting == nil && !loaf.isEmpty && !isAppearing {
-                    makeMoreToast()
+                    decideWhetherToMakeMoreToastNowOrLater()
                 }
             }
     }
     
-    private func makeMoreToast() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) {
-            if !loaf.isEmpty {
-                currentlyToasting = loaf.removeFirst()
-                id = UUID()
+    private func decideWhetherToMakeMoreToastNowOrLater() {
+        if currentlyToasting == nil { // Show the toast immediately
+            makeMoreToast()
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) { // Show the toast with a delay
+                makeMoreToast()
             }
+        }
+    }
+    
+    private func makeMoreToast() {
+        if !loaf.isEmpty {
+            currentlyToasting = loaf.removeFirst()
+            id = UUID()
         }
     }
 }
