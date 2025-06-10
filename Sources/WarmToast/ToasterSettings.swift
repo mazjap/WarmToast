@@ -1,4 +1,4 @@
-import SwiftUICore
+import SwiftUI
 
 public struct ToasterSettings<S: ShapeStyle>: Sendable {
     /// The duration that the toast is shown on screen in seconds.
