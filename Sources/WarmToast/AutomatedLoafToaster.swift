@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-struct AutomatedLoafToaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
+struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: ViewModifier {
     @State private var isAppearing = true
     @State private var currentlyToasting: Bread? = nil
     @State private var id: UUID? = nil
@@ -37,14 +37,18 @@ struct AutomatedLoafToaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
                 options: options,
                 advancedOptions: advancedOptions,
                 id: id,
-                toast: toast
+                toast: toast,
+                onDisappear: {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) {
+                        decideWhetherToMakeMoreToastNowOrLater()
+                    }
+                }
             ))
             .onAppear {
                 isAppearing = false
                 decideWhetherToMakeMoreToastNowOrLater()
             }
-            // Not ideal, body is called each time the view is redrawn, but onChange isn't supported on iOS 13 :(
-            .onReceive(Just(loaf)) { _ in
+            .onChange(of: loaf.map(\.id)) { _ in
                 if currentlyToasting == nil && !loaf.isEmpty && !isAppearing {
                     decideWhetherToMakeMoreToastNowOrLater()
                 }
@@ -70,8 +74,17 @@ struct AutomatedLoafToaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
 }
 
 struct AutomatedLoafToaster_Previews: PreviewProvider {
+    struct Payload: Identifiable {
+        let value: String
+        let id = UUID()
+        
+        init(_ string: String) {
+            self.value = string
+        }
+    }
+    
     struct ToasterPreviewView: View {
-        @State var messages = [String]()
+        @State var messages = [Payload]()
         
         var body: some View {
             VStack {
@@ -82,14 +95,14 @@ struct AutomatedLoafToaster_Previews: PreviewProvider {
                     
                     Button(messages.isEmpty ? "Populate toaster" : "Clear toaster") {
                         if messages.isEmpty {
-                            messages = Bool.random() ? [
+                            messages = (Bool.random() ? [
                                 "Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World",
                                 "The fitness graham pacer test",
                                 "Uh oh, something went wrong",
                                 "I like trains"
                             ] : (1...20).map {
                                 String($0)
-                            }
+                            }).map { Payload($0) }
                         } else {
                             messages = []
                         }
@@ -106,7 +119,7 @@ struct AutomatedLoafToaster_Previews: PreviewProvider {
                 withLoaf: $messages,
                 options: .toasterStrudel(type: .info, duration: .seconds(1))
             ) { message in
-                Text(message)
+                Text(message.value)
                     .font(.title)
             }
         }

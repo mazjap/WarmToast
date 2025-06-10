@@ -9,11 +9,13 @@ struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
     private let advancedOptions: ToasterInternals
     private let id: UUID?
     private let toast: (Bread) -> Toast
+    private let onDisappear: (() -> Void)?
     private let timer: AnyPublisher<Timer.TimerPublisher.Output, Timer.TimerPublisher.Failure>
     
-    init(bread: Binding<Bread?>, options: ToasterSettings<S>, advancedOptions: ToasterInternals, id: UUID?, toast: @escaping (Bread) -> Toast) {
+    init(bread: Binding<Bread?>, options: ToasterSettings<S>, advancedOptions: ToasterInternals, id: UUID?, toast: @escaping (Bread) -> Toast, onDisappear: (() -> Void)? = nil) {
         self._bread = bread
         self.toast = toast
+        self.onDisappear = onDisappear
         self.options = options
         self.advancedOptions = advancedOptions
         self.id = id
@@ -68,6 +70,9 @@ struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
                         self.bread = nil
                     }
                 }
+                .onDisappear {
+                    onDisappear?()
+                }
         }
     }
     
@@ -113,6 +118,9 @@ struct Toaster_Previews: PreviewProvider {
             ) { message in
                 Text(message)
                     .font(.title)
+            }
+            .onChange(of: message) { value in
+                print("change thing happened.\nNew:\n\(String(describing: value))\n\n\n\n")
             }
         }
     }

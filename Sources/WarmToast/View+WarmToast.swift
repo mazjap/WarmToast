@@ -61,14 +61,14 @@ extension View {
     ///   - loaf: Whether or not the toaster has popped out some toast.
     ///   - options: Toaster options.
     ///   - advancedOptions: Advanced options for the toaster. If not included in initializer, it will use `ToasterInternals`' default initializer.
-    ///   - durationBetweenToasts: The time in seconds after one toast begins dismissal before the next is presented. Because it's from the beginning of the dismissal, it's recommended to use at least 0.25.
+    ///   - durationBetweenToasts: The time before the next toast is presented after one has dismissed in seconds. Defaults to 0.1.
     ///   - toast: A view closure that turns bread into toast.
     /// - Returns: Your view with a toaster attached, just out of sight.
-    public func preheatToaster<Bread, S, Toast>(
+    public func preheatToaster<Bread: Identifiable, S, Toast>(
         withLoaf loaf: Binding<[Bread]>,
         options: ToasterSettings<S>,
         advancedOptions: ToasterInternals = .init(),
-        durationBetweenToasts: TimeInterval = 0.5,
+        durationBetweenToasts: TimeInterval = 0.1,
         @ViewBuilder toast: @escaping (Bread) -> Toast
     ) -> some View where S: ShapeStyle, Toast: View {
         self.modifier(AutomatedLoafToaster(
