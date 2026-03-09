@@ -1,21 +1,17 @@
 import SwiftUI
-import Combine
 
 struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: ViewModifier {
     @State private var isAppearing = true
     @State private var currentlyToasting: Bread? = nil
-    @State private var id: UUID? = nil
     @Binding private var loaf: [Bread]
     
     private let options: ToasterSettings<S>
-    private let advancedOptions: ToasterInternals
     private let durationBetweenToasts: TimeInterval
     private let toast: (Bread) -> Toast
     
-    init(loaf: Binding<[Bread]>, options: ToasterSettings<S>, advancedOptions: ToasterInternals, durationBetweenToasts: TimeInterval, toast: @escaping (Bread) -> Toast) {
+    init(loaf: Binding<[Bread]>, options: ToasterSettings<S>, durationBetweenToasts: TimeInterval, toast: @escaping (Bread) -> Toast) {
         self._loaf = loaf
         self.options = options
-        self.advancedOptions = advancedOptions
         self.durationBetweenToasts = durationBetweenToasts
         self.toast = toast
     }
@@ -25,18 +21,12 @@ struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: Vi
             currentlyToasting
         } set: {
             currentlyToasting = $0
-            
-            if currentlyToasting == nil {
-                id = nil
-            }
         }
         
         content
             .modifier(Toaster(
                 bread: breadBinding,
                 options: options,
-                advancedOptions: advancedOptions,
-                id: id,
                 toast: toast,
                 onDisappear: {
                     DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) {
@@ -56,10 +46,10 @@ struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: Vi
     }
     
     private func decideWhetherToMakeMoreToastNowOrLater() {
-        if currentlyToasting == nil { // Show the toast immediately
+        if currentlyToasting == nil {
             makeMoreToast()
         } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) { // Show the toast with a delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) {
                 makeMoreToast()
             }
         }
@@ -68,7 +58,6 @@ struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: Vi
     private func makeMoreToast() {
         if !loaf.isEmpty {
             currentlyToasting = loaf.removeFirst()
-            id = UUID()
         }
     }
 }
@@ -121,6 +110,32 @@ struct AutomatedLoafToaster_Previews: PreviewProvider {
             ) { message in
                 Text(message.value)
                     .font(.title)
+            }
+            .sheet(isPresented: .constant(true)) {
+                ZStack {
+                    Color.black.edgesIgnoringSafeArea(.all)
+                    
+                    VStack {
+                        Spacer()
+                        
+                        Button(messages.isEmpty ? "Populate toaster" : "Clear toaster") {
+                            if messages.isEmpty {
+                                messages = (Bool.random() ? [
+                                    "Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World, Hello, World",
+                                    "The fitness graham pacer test",
+                                    "Uh oh, something went wrong",
+                                    "I like trains"
+                                ] : (1...20).map {
+                                    String($0)
+                                }).map { Payload($0) }
+                            } else {
+                                messages = []
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                }
             }
         }
     }

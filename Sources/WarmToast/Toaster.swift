@@ -1,87 +1,42 @@
 import SwiftUI
-import Combine
 
 struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
     @Binding private var bread: Bread?
-    @State private var offset = Double.zero
+    @State private var windowManager = ToastWindowManager()
     
     private let options: ToasterSettings<S>
-    private let advancedOptions: ToasterInternals
-    private let id: UUID?
     private let toast: (Bread) -> Toast
     private let onDisappear: (() -> Void)?
-    private let timer: AnyPublisher<Timer.TimerPublisher.Output, Timer.TimerPublisher.Failure>
     
-    init(bread: Binding<Bread?>, options: ToasterSettings<S>, advancedOptions: ToasterInternals, id: UUID?, toast: @escaping (Bread) -> Toast, onDisappear: (() -> Void)? = nil) {
+    init(bread: Binding<Bread?>, options: ToasterSettings<S>, toast: @escaping (Bread) -> Toast, onDisappear: (() -> Void)? = nil) {
         self._bread = bread
         self.toast = toast
         self.onDisappear = onDisappear
         self.options = options
-        self.advancedOptions = advancedOptions
-        self.id = id
-        self.timer = Timer.TimerPublisher(interval: options.timeTilToasted.timeInterval, tolerance: 0.1, runLoop: .main, mode: .common, options: nil).autoconnect().eraseToAnyPublisher()
-    }
-    
-    @ViewBuilder
-    private var toastView: some View {
-        if let bread {
-            let animation = options.animation ?? .default
-            
-            toast(bread)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(
-                    HStack(spacing: 0) {
-                        if let accent = options.accentColor {
-                            accent
-                                .frame(width: 8)
-                        }
-                        
-                        Rectangle()
-                            .fill(options.background)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                )
-                .id(id?.uuidString ?? "toast")
-                .offset(y: offset)
-                .gesture(DragGesture()
-                    .onChanged { value in
-                        guard options.isSwipable else { return }
-                        
-                        offset = min(0, value.translation.height)
-                    }
-                    .onEnded { value in
-                        guard options.isSwipable else { return }
-                        
-                        if offset < -30 {
-                            self.bread = nil
-                            offset = 0
-                        } else {
-                            withAnimation {
-                                offset = .zero
-                            }
-                        }
-                    }
-                )
-                .transition(.toastInsertion(options.presentationStyle, animation: animation))
-                .animation(animation)
-                .onReceive(timer) { date in
-                    if options.timeTilToasted != .indefinitely {
-                        self.bread = nil
-                    }
-                }
-                .onDisappear {
-                    onDisappear?()
-                }
-        }
     }
     
     func body(content: Content) -> some View {
-        ZStack(alignment: .center) {
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay(toastView.zIndex(advancedOptions.customToastZIndex), alignment: .top)
-        }
+        content
+            .onAppear {
+                guard let bread else { return }
+                windowManager.show(bread: bread, options: options, toast: toast, onDismiss: {
+                    self.bread = nil
+                    self.onDisappear?()
+                })
+            }
+            .onDisappear {
+                windowManager.cleanup()
+            }
+            .onChange(of: bread != nil, do: { isNonNil in
+                if isNonNil, let currentBread = bread {
+                    windowManager.show(bread: currentBread, options: options, toast: toast, onDismiss: {
+                        self.bread = nil
+                        self.onDisappear?()
+                    })
+                } else {
+                    windowManager.hide()
+                }
+            })
     }
 }
 
@@ -113,14 +68,10 @@ struct Toaster_Previews: PreviewProvider {
             .edgesIgnoringSafeArea(.all)
             .preheatToaster(
                 withBread: $message,
-                options: .toasterStrudel(type: .info, duration: .seconds(5)),
-                toastId: UUID()
+                options: .toasterStrudel(type: .info, duration: .seconds(5))
             ) { message in
                 Text(message)
                     .font(.title)
-            }
-            .onChange(of: message) { value in
-                print("change thing happened.\nNew:\n\(String(describing: value))\n\n\n\n")
             }
         }
     }
