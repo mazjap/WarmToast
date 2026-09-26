@@ -66,6 +66,42 @@ import Testing
         #expect(await waitUntil { box.toasting == "B" })
     }
     
+    @Test func duplicateAddedWhileTheToastLeavesIsToastedNext() async throws {
+        // Regression: a toast leaving on its own still counted as current during its exit animation,
+        // so the same bread put in then was thrown away as a duplicate.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .seconds(0.3))) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("Finish your marker first")
+        // Time the second bread from when the toast appears, so it lands during the 0.3-second toast's exit.
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+        try await Task.sleep(for: .milliseconds(380))
+        box.toast("Finish your marker first")
+        
+        #expect(await waitUntil { harness.source.madeWindows.count == 2 })
+    }
+    
+    @Test func breadReplacedWhileTheToastLeavesIsNotLost() async throws {
+        // Regression: .replace put the new bread into the leaving toast, and it left with it.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .seconds(0.3))) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("Downloading 90%", recipe: "download")
+        // Time the second bread from when the toast appears, so it lands during the 0.3-second toast's exit.
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+        try await Task.sleep(for: .milliseconds(380))
+        box.toast("Download finished", recipe: "download", ifDuplicate: .replace)
+        
+        #expect(await waitUntil { box.toasting == "Download finished" })
+        #expect(await waitUntil { harness.source.madeWindows.count == 2 })
+    }
+    
     @Test func ejectingBeforeTheToastRendersStillEndsIt() async throws {
         // Regression: a dismissal requested before the toast window's first render was never seen,
         // so the toast stayed up and the box stalled.

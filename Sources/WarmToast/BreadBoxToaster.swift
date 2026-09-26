@@ -28,8 +28,8 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
             .onChange(of: box.current?.id) {
                 presentCurrentOrder()
             }
-            .onChange(of: box.isEjecting) { _, isEjecting in
-                if isEjecting {
+            .onChange(of: box.isLeaving) { _, isLeaving in
+                if isLeaving {
                     windowManager.hide()
                 }
             }
@@ -58,7 +58,7 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
             }
         )
         
-        if box.isEjecting {
+        if box.isLeaving {
             windowManager.hide()
         }
     }

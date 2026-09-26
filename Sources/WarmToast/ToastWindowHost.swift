@@ -145,6 +145,9 @@ struct ToastWindowHost<Bread, Toast: View>: View {
     
     private func dismiss() {
         countdown.cancel()
+        // The box stops treating the toast as current, so new bread isn't mistaken for a duplicate
+        // while this one animates out.
+        box.toastWillLeave(orderID: orderID)
         withAnimation(animation) { isVisible = false }
     }
 }

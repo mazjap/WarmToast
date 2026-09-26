@@ -152,15 +152,27 @@ import Testing
 
         box.eject()
 
-        #expect(box.isEjecting)
+        #expect(box.isLeaving)
     }
 
+    @Test func toastLeavingOnItsOwnIsNotADuplicate() throws {
+        let box = BreadBox<String>()
+        box.toast("A")
+        let order = try #require(box.current)
+        
+        box.toastWillLeave(orderID: order.id)
+        box.toast("A")
+        
+        #expect(box.isLeaving)
+        #expect(box.waiting == ["A"])
+    }
+    
     @Test func ejectWithNothingToastingDoesNothing() {
         let box = BreadBox<String>()
 
         box.eject()
 
-        #expect(!box.isEjecting)
+        #expect(!box.isLeaving)
     }
 
     @Test func emptyBoxThrowsOutWaitingBreadAndEjects() throws {
@@ -171,7 +183,7 @@ import Testing
         box.emptyBox()
 
         #expect(box.waiting.isEmpty)
-        #expect(box.isEjecting)
+        #expect(box.isLeaving)
 
         try finishCurrentToast(in: box)
         #expect(box.isEmpty)
