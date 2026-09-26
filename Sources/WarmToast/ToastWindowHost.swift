@@ -13,6 +13,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     let bread: Bread
     let options: ToasterSettings<S>
     let toast: (Bread) -> Toast
+    let onToastFrameChange: (CGRect?) -> Void
     let onDismiss: () -> Void
     
     private let animation: Animation
@@ -23,12 +24,14 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
         bread: Bread,
         options: ToasterSettings<S>,
         toast: @escaping (Bread) -> Toast,
+        onToastFrameChange: @escaping (CGRect?) -> Void,
         onDismiss: @escaping () -> Void
     ) {
         self.dismissSignal = dismissSignal
         self.bread = bread
         self.options = options
         self.toast = toast
+        self.onToastFrameChange = onToastFrameChange
         self.onDismiss = onDismiss
         self.animation = options.animation ?? .default
         self.timer = Timer.TimerPublisher(
@@ -55,6 +58,9 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                         }
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     )
+                    .background(GeometryReader { proxy in
+                        Color.clear.preference(key: ToastFramePreferenceKey.self, value: proxy.frame(in: .global))
+                    })
                     .offset(y: offset)
                     .gesture(
                         DragGesture()
@@ -83,6 +89,9 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onPreferenceChange(ToastFramePreferenceKey.self) { frame in
+            onToastFrameChange(frame)
+        }
         .onAppear {
             withAnimation(animation) { isVisible = true }
         }
@@ -93,5 +102,13 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     
     private func dismiss() {
         withAnimation(animation) { isVisible = false }
+    }
+}
+
+private struct ToastFramePreferenceKey: PreferenceKey {
+    static let defaultValue: CGRect? = nil
+    
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        value = nextValue() ?? value
     }
 }
