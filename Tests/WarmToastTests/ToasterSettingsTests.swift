@@ -23,3 +23,17 @@ import Testing
         #expect(settings.presentationAnimation(reduceMotion: false) == .default)
     }
 }
+
+@Suite struct ToastBackgroundTests {
+    @Test func settingsAcceptAnyShapeStyleAsTheBackground() {
+        // These only need to compile: the settings type no longer carries the style's type.
+        let settings: [ToasterSettings] = [
+            ToasterSettings(timeTilToasted: 3, background: Color.black.opacity(0.8)),
+            ToasterSettings(timeTilToasted: 3, background: .regularMaterial),
+            ToasterSettings(timeTilToasted: 3, background: LinearGradient(colors: [.red, .blue], startPoint: .top, endPoint: .bottom)),
+            ToasterSettings(timeTilToasted: 3),
+        ]
+        
+        #expect(settings.count == 4)
+    }
+}

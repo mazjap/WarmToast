@@ -28,9 +28,9 @@ final class ToastWindowManager {
         pendingToast != nil
     }
 
-    func show<Bread, S: ShapeStyle, Toast: View>(
+    func show<Bread, Toast: View>(
         bread: Bread,
-        options: ToasterSettings<S>,
+        options: ToasterSettings,
         toast: @escaping (Bread) -> Toast,
         onDismiss: @escaping () -> Void
     ) {

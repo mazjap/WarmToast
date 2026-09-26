@@ -1,15 +1,15 @@
 import SwiftUI
 
-struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: ViewModifier {
+struct AutomatedLoafToaster<Bread: Identifiable, Toast: View>: ViewModifier {
     @State private var scheduler = LoafScheduler()
     @State private var currentlyToasting: Bread? = nil
     @Binding private var loaf: [Bread]
     
-    private let options: ToasterSettings<S>
+    private let options: ToasterSettings
     private let durationBetweenToasts: TimeInterval
     private let toast: (Bread) -> Toast
     
-    init(loaf: Binding<[Bread]>, options: ToasterSettings<S>, durationBetweenToasts: TimeInterval, toast: @escaping (Bread) -> Toast) {
+    init(loaf: Binding<[Bread]>, options: ToasterSettings, durationBetweenToasts: TimeInterval, toast: @escaping (Bread) -> Toast) {
         self._loaf = loaf
         self.options = options
         self.durationBetweenToasts = durationBetweenToasts

@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct ToasterSettings<S: ShapeStyle>: Sendable {
+public struct ToasterSettings: Sendable {
     /// The duration that the toast is shown on screen in seconds.
     /// - Note: Use `PresentedDuration.indefinitely` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
     public let timeTilToasted: PresentedDuration
@@ -9,9 +9,9 @@ public struct ToasterSettings<S: ShapeStyle>: Sendable {
     /// - Note: No leading edge color will be shown if nil is provided.
     public let accentColor: Color?
     
-    /// The background color of the toast.
-    /// - Note: `Color.warmToastDefaultBackgroundColor` will be used if no parameter is provided.
-    public let background: S
+    /// The background of the toast.
+    /// - Note: `ToastBackground.default` will be used if no parameter is provided.
+    public let background: ToastBackground
     
     /// The method with which to insert the toast into the world.
     /// - Note: `PresentationStyle.slide` will be used if none is provided.
@@ -28,14 +28,14 @@ public struct ToasterSettings<S: ShapeStyle>: Sendable {
     /// - Parameters:
     ///   - timeTilToasted: The duration that the toast is shown on screen in seconds. Use `PresentedDuration.indefinitely` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
     ///   - accentColor: Color applied to the leading edge of the toast. No leading edge color will be shown if nil is provided.
-    ///   - background: The background of the toast. Defaults to `Color.warmToastDefaultBackgroundColor`. `Color.clear` can be used as fits your needs. `warmToastDefaultBackgroundColor` is `UIColor.systemBackground`.
+    ///   - background: The background of the toast. Defaults to `ToastBackground.default`, which is `UIColor.systemBackground`.
     ///   - presentationStyle: The method with which to insert the toast into the world. `PresentationStyle.slide` will be used if none is provided.
     ///   - animation: The animation to use when presenting the toast.
     ///   - isSwipable: Whether swipe-to-dismiss is enabled on the toast. Defaults to true.
     public init(
         timeTilToasted: PresentedDuration,
         accentColor: Color? = nil,
-        background: S = Color.warmToastDefaultBackgroundColor,
+        background: ToastBackground = .default,
         presentationStyle: PresentationStyle = .slide,
         animation: Animation? = nil,
         isSwipable: Bool = true
@@ -52,34 +52,32 @@ public struct ToasterSettings<S: ShapeStyle>: Sendable {
 // MARK: - Convenience initializer(s)
 
 extension ToasterSettings {
-    /// ToasterSettings initializer. Also see the static methods such as: `toasterStrudel` for built in options.
+    /// ToasterSettings initializer that fills the background with a shape style, such as a color or material.
     /// - Parameters:
     ///   - timeTilToasted: The duration that the toast is shown on screen. Use `PresentedDuration.indefinitely` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
     ///   - accentColor: Color applied to the leading edge of the toast. No leading edge color will be shown if nil is provided.
-    ///   - background: The background of the toast. Defaults to `Color.warmToastDefaultBackgroundColor`. `Color.clear` can be used as fits your needs. `warmToastDefaultBackgroundColor` is `UIColor.systemBackground`.
+    ///   - background: The shape style to fill the toast's background with.
     ///   - presentationStyle: The method with which to insert the toast into the world. `PresentationStyle.slide` will be used if none is provided.
     ///   - animation: The animation to use when presenting the toast.
     ///   - isSwipable: Whether swipe-to-dismiss is enabled on the toast. Defaults to true.
-    @_disfavoredOverload
     public init(
-        timeTilToasted: Double,
+        timeTilToasted: PresentedDuration,
         accentColor: Color? = nil,
-        background: S,
+        background: some ShapeStyle,
         presentationStyle: PresentationStyle = .slide,
         animation: Animation? = nil,
         isSwipable: Bool = true
     ) {
         self.init(
-            timeTilToasted: .seconds(timeTilToasted),
+            timeTilToasted: timeTilToasted,
             accentColor: accentColor,
-            background: background,
+            background: .style(background),
             presentationStyle: presentationStyle,
             animation: animation,
             isSwipable: isSwipable
         )
     }
 }
-
 
 // MARK: - Motion
 
@@ -97,7 +95,7 @@ extension ToasterSettings {
 
 // MARK: - Static properties
 
-extension ToasterSettings where S == Color {
+extension ToasterSettings {
     public enum StrudelType {
         case error
         case warning

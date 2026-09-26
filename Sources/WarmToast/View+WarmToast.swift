@@ -9,11 +9,11 @@ extension View {
     ///   - options: Toaster options.
     ///   - toast: A view closure that turns bread into toast.
     /// - Returns: Your view with a toaster attached, just out of sight.
-    public func preheatToaster<Bread, S, Toast>(
+    public func preheatToaster<Bread, Toast>(
         withBread bread: Binding<Bread?>,
-        options: ToasterSettings<S>,
+        options: ToasterSettings,
         @ViewBuilder toast: @escaping (Bread) -> Toast
-    ) -> some View where S: ShapeStyle, Toast: View {
+    ) -> some View where Toast: View {
         self.modifier(Toaster(bread: bread, options: options, toast: toast))
     }
     
@@ -23,11 +23,11 @@ extension View {
     ///   - options: Toaster options.
     ///   - toast: A view closure that turns bread into toast.
     /// - Returns: Your view with a toaster attached, just out of sight.
-    public func preheatToaster<S, Toast>(
+    public func preheatToaster<Toast>(
         isToasting: Binding<Bool>,
-        options: ToasterSettings<S>,
+        options: ToasterSettings,
         @ViewBuilder toast: @escaping () -> Toast
-    ) -> some View where S: ShapeStyle, Toast: View {
+    ) -> some View where Toast: View {
         let binding = Binding<Bool?> {
             isToasting.wrappedValue ? true : nil
         } set: {
@@ -50,12 +50,12 @@ extension View {
     ///   - durationBetweenToasts: The time before the next toast is presented after one has dismissed in seconds. Defaults to 0.1.
     ///   - toast: A view closure that turns bread into toast.
     /// - Returns: Your view with a toaster attached, just out of sight.
-    public func preheatToaster<Bread: Identifiable, S, Toast>(
+    public func preheatToaster<Bread: Identifiable, Toast>(
         withLoaf loaf: Binding<[Bread]>,
-        options: ToasterSettings<S>,
+        options: ToasterSettings,
         durationBetweenToasts: TimeInterval = 0.1,
         @ViewBuilder toast: @escaping (Bread) -> Toast
-    ) -> some View where S: ShapeStyle, Toast: View {
+    ) -> some View where Toast: View {
         self.modifier(AutomatedLoafToaster(
             loaf: loaf,
             options: options,

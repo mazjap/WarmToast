@@ -1,14 +1,14 @@
 import SwiftUI
 
-struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
+struct Toaster<Bread, Toast: View>: ViewModifier {
     @Binding private var bread: Bread?
     @State private var windowManager = ToastWindowManager()
     
-    private let options: ToasterSettings<S>
+    private let options: ToasterSettings
     private let toast: (Bread) -> Toast
     private let onDisappear: (() -> Void)?
     
-    init(bread: Binding<Bread?>, options: ToasterSettings<S>, toast: @escaping (Bread) -> Toast, onDisappear: (() -> Void)? = nil) {
+    init(bread: Binding<Bread?>, options: ToasterSettings, toast: @escaping (Bread) -> Toast, onDisappear: (() -> Void)? = nil) {
         self._bread = bread
         self.toast = toast
         self.onDisappear = onDisappear

@@ -5,7 +5,7 @@ final class ToastDismissSignal {
     var shouldDismiss = false
 }
 
-struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
+struct ToastWindowHost<Bread, Toast: View>: View {
     @State private var isVisible = false
     @State private var offset: CGFloat = .zero
     @GestureState private var isTouching = false
@@ -13,7 +13,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     let dismissSignal: ToastDismissSignal
     
     let bread: Bread
-    let options: ToasterSettings<S>
+    let options: ToasterSettings
     let toast: (Bread) -> Toast
     let onDismiss: () -> Void
     
@@ -23,7 +23,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     init(
         dismissSignal: ToastDismissSignal,
         bread: Bread,
-        options: ToasterSettings<S>,
+        options: ToasterSettings,
         toast: @escaping (Bread) -> Toast,
         onDismiss: @escaping () -> Void
     ) {
@@ -44,15 +44,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                 toast(bread)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
-                    .background(
-                        HStack(spacing: 0) {
-                            if let accent = options.accentColor {
-                                accent.frame(width: 8)
-                            }
-                            Rectangle().fill(options.background)
-                        }
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    )
+                    .background(ToastBackgroundView(background: options.background, accentColor: options.accentColor))
                     .background(ToastHitArea())
                     .offset(y: offset)
                     .simultaneousGesture(
