@@ -161,6 +161,35 @@ extension ToasterSettings {
             }
         }
         
+        /// The color of the type's icon: the tint's increased-contrast variant, which stays legible on
+        /// the default background in light and dark mode. The bright tint is too light for yellow and green.
+        var iconTint: Color {
+            Color(uiColor: iconUIColor)
+        }
+        
+        var iconUIColor: UIColor {
+            uiTint.increasedContrast
+        }
+        
+        private var uiTint: UIColor {
+            switch self {
+            case .error: .systemRed
+            case .warning: .systemYellow
+            case .info: .systemBlue
+            case .success: .systemGreen
+            }
+        }
+        
+        /// How VoiceOver names the type, as the label of a slice's icon.
+        public var accessibilityName: String {
+            switch self {
+            case .error: "Error"
+            case .warning: "Warning"
+            case .info: "Info"
+            case .success: "Success"
+            }
+        }
+        
         /// The name of the SF Symbol that represents the type.
         public var symbolName: String {
             switch self {
