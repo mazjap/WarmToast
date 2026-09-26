@@ -51,6 +51,7 @@ struct ToastWindowHost<Bread, Toast: View>: View {
                 let settings = order.options ?? options(order.bread)
 
                 toast(order.bread)
+                    .environment(\.ejectToast, EjectToastAction { dismiss() })
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
                     .background(ToastBackgroundView(background: settings.background, accentColor: settings.accentColor))

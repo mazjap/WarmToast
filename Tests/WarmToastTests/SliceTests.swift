@@ -39,4 +39,14 @@ import Testing
         _ = Color.clear.preheatToaster(withBreadBox: box)
         _ = Color.clear.preheatToaster(withBreadBox: box) { _ in .toasterStrudel(type: .info, duration: 10) }
     }
+    
+    @Test func toppingsDoNotChangeWhichSlicesAreDuplicates() {
+        let box = BreadBox<Slice>()
+        
+        box.toast(Slice("Group deleted", type: .info, topping: Topping("Undo") {}))
+        box.toast(Slice("Group deleted", type: .info))
+        
+        #expect(box.waiting.isEmpty)
+        #expect(box.toasting?.topping?.title == "Undo")
+    }
 }

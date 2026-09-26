@@ -127,6 +127,22 @@ import Testing
         #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
     }
     
+    @Test func toastContentCanEjectItsOwnToast() async throws {
+        // Toppings dismiss their toast through this environment action.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .indefinitely)) {
+                SelfEjectingToast(text: $0)
+            }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("Bye")
+        
+        #expect(await waitUntil { box.isEmpty })
+        #expect(await waitUntil { harness.visibleToastWindow == nil })
+    }
+    
     // MARK: - Bread binding
     
     @Test func bindingIsClearedWhenTheToastLeaves() async throws {
@@ -251,6 +267,20 @@ private struct StateHost<Value: Equatable, Content: View>: View {
             }
             .onChange(of: remote.value) { _, newValue in value = newValue }
             .onChange(of: value) { _, newValue in remote.value = newValue }
+    }
+}
+
+/// Toast content that dismisses its own toast shortly after it appears.
+private struct SelfEjectingToast: View {
+    let text: String
+    @Environment(\.ejectToast) private var ejectToast
+    
+    var body: some View {
+        Text(text)
+            .task {
+                try? await Task.sleep(for: .milliseconds(100))
+                ejectToast()
+            }
     }
 }
 
