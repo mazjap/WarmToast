@@ -133,3 +133,45 @@ extension View {
         self.modifier(BreadBoxToaster(box: breadBox, options: options, toast: toast))
     }
 }
+
+// MARK: - Public slice toasting API
+
+extension View {
+    /// Warm up the toaster to toast a slice, drawn with `ToastedSlice`.
+    /// - Parameters:
+    ///   - slice: The slice to toast. When nil, the toast is removed.
+    ///   - options: Picks the toaster options for a slice. Defaults to a toaster strudel of the slice's type.
+    /// - Returns: Your view with a toaster attached, just out of sight.
+    public func preheatToaster(
+        withBread slice: Binding<Slice?>,
+        options: @escaping (Slice) -> ToasterSettings = ToasterSettings.toasterStrudel(for:)
+    ) -> some View {
+        self.preheatToaster(withBread: slice, options: options) { ToastedSlice($0) }
+    }
+    
+    /// Warm up the toaster to toast a loaf of slices one at a time, drawn with `ToastedSlice`.
+    /// - Parameters:
+    ///   - loaf: The slices to toast. Each slice is removed from the loaf when it's toasted.
+    ///   - options: Picks the toaster options for a slice. Defaults to a toaster strudel of the slice's type.
+    ///   - durationBetweenToasts: The time before the next toast is presented after one has dismissed in seconds. Defaults to 0.1.
+    /// - Returns: Your view with a toaster attached, just out of sight.
+    public func preheatToaster(
+        withLoaf loaf: Binding<[Slice]>,
+        options: @escaping (Slice) -> ToasterSettings = ToasterSettings.toasterStrudel(for:),
+        durationBetweenToasts: TimeInterval = 0.1
+    ) -> some View {
+        self.preheatToaster(withLoaf: loaf, options: options, durationBetweenToasts: durationBetweenToasts) { ToastedSlice($0) }
+    }
+    
+    /// Warm up the toaster to toast the slices from a bread box, drawn with `ToastedSlice`.
+    /// - Parameters:
+    ///   - breadBox: The box to take slices from.
+    ///   - options: Picks the toaster options for a slice put in without its own. Defaults to a toaster strudel of the slice's type.
+    /// - Returns: Your view with a toaster attached, just out of sight.
+    public func preheatToaster(
+        withBreadBox breadBox: BreadBox<Slice>,
+        options: @escaping (Slice) -> ToasterSettings = ToasterSettings.toasterStrudel(for:)
+    ) -> some View {
+        self.preheatToaster(withBreadBox: breadBox, options: options) { ToastedSlice($0) }
+    }
+}

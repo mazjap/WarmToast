@@ -72,6 +72,8 @@ func waitUntil(timeout: TimeInterval = 2, _ condition: () -> Bool) async -> Bool
 }
 
 /// Hosts a view in a window of its own, with toasters presenting through `source`.
+/// It replaces the default window source for the whole process, so only use it in `ToasterModifierTests`,
+/// which runs serialized.
 @MainActor
 final class ToasterHarness {
     let source = FakeToastWindowSource()

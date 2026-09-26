@@ -115,6 +115,18 @@ import Testing
         #expect(await waitUntil { box.isEmpty })
     }
     
+    @Test func sliceToastsAppearFromABreadBox() async {
+        let box = BreadBox<Slice>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box)
+        }
+        defer { harness.tearDown() }
+        
+        box.toast(Slice("Download finished", message: "Yosemite Valley", type: .success))
+        
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+    }
+    
     // MARK: - Bread binding
     
     @Test func bindingIsClearedWhenTheToastLeaves() async throws {
