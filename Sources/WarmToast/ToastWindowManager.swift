@@ -56,7 +56,13 @@ final class ToastWindowManager {
             onDismiss: onDismiss
         )
 
-        presentPendingToastIfPossible()
+        // Toasts are usually shown from a SwiftUI update, such as a view's first onAppear. A window
+        // created in the middle of one can stay blank, so it's created on the next turn of the run loop.
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                self?.presentPendingToastIfPossible()
+            }
+        }
     }
 
     func hide() {
@@ -83,7 +89,6 @@ final class ToastWindowManager {
         let signal = ToastDismissSignal()
         toastWindow.rootViewController = pendingToast.makeRootViewController(pendingToast.id, signal)
         toastWindow.isHidden = false
-        toastWindow.layoutIfNeeded()
 
         self.pendingToast = nil
         self.window = toastWindow

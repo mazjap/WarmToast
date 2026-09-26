@@ -4,11 +4,12 @@ import Testing
 
 @MainActor
 @Suite struct ToastWindowManagerTests {
-    @Test func showsToastRightAwayWhenAWindowIsAvailable() {
+    @Test func showsToastWhenAWindowIsAvailable() async {
         let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
         
         manager.show("Hello")
         
+        #expect(await waitUntil { manager.window != nil })
         #expect(manager.window?.isHidden == false)
         #expect(!manager.isPending)
     }
@@ -59,14 +60,16 @@ import Testing
         #expect(!manager.isPending)
     }
     
-    @Test func staleDisappearanceDoesNotDismissTheNextToast() throws {
+    @Test func staleDisappearanceDoesNotDismissTheNextToast() async throws {
         let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
         let firstDismissals = CallCounter()
         let secondDismissals = CallCounter()
         
         manager.show("First", onDismiss: firstDismissals.increment)
+        try #require(await waitUntil { manager.presentationID != nil })
         let firstID = try #require(manager.presentationID)
         manager.show("Second", onDismiss: secondDismissals.increment)
+        try #require(await waitUntil { manager.presentationID.map { $0 != firstID } ?? false })
         let secondWindow = try #require(manager.window)
         
         // The first window's content reports its disappearance after it was replaced.
@@ -78,11 +81,12 @@ import Testing
         #expect(secondDismissals.count == 0)
     }
     
-    @Test func currentDisappearanceDismissesTheToast() throws {
+    @Test func currentDisappearanceDismissesTheToast() async throws {
         let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
         let dismissals = CallCounter()
         
         manager.show("Hello", onDismiss: dismissals.increment)
+        try #require(await waitUntil { manager.window != nil })
         let window = try #require(manager.window)
         manager.toastDidDisappear(presentationID: try #require(manager.presentationID))
         
@@ -106,6 +110,7 @@ import Testing
         let dismissals = CallCounter()
         
         manager.show("Hello", onDismiss: dismissals.increment)
+        try #require(await waitUntil { manager.window != nil })
         let window = try #require(manager.window)
         try #require(await waitUntil { window.toastFrame != nil })
         
