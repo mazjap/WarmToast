@@ -102,6 +102,40 @@ import Testing
         #expect(await waitUntil { harness.source.madeWindows.count == 2 })
     }
     
+    @Test func aBoxOnTwoToastersShowsEachToastOnce() async throws {
+        // Regression: every toaster attached to the box presented its current toast in a window of its own.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let showsFirstToaster = BindingBox(true)
+        let showsSecondToaster = BindingBox(false)
+        let harness = ToasterHarness {
+            VStack {
+                ShowWhile(showsFirstToaster) {
+                    Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) }
+                }
+                ShowWhile(showsSecondToaster) {
+                    Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) }
+                }
+            }
+        }
+        defer { harness.tearDown() }
+        // Attach the toasters one after the other, so the first one is the one presenting.
+        try await Task.sleep(for: .milliseconds(100))
+        showsSecondToaster.value = true
+        try await Task.sleep(for: .milliseconds(100))
+        
+        box.toast("A")
+        box.toast("B")
+        #expect(await waitUntil { harness.visibleToastWindow != nil })
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(harness.source.madeWindows.count == 1)
+        
+        // The first toaster going away ends its toast, and the second toaster takes over.
+        showsFirstToaster.value = false
+        
+        #expect(await waitUntil { box.toasting == "B" })
+        #expect(await waitUntil { harness.source.madeWindows.count == 2 && harness.visibleToastWindow != nil })
+    }
+    
     @Test func ejectingBeforeTheToastRendersStillEndsIt() async throws {
         // Regression: a dismissal requested before the toast window's first render was never seen,
         // so the toast stayed up and the box stalled.

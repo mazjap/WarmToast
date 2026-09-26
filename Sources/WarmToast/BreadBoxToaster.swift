@@ -8,6 +8,7 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
     
     @State private var windowManager = ToastWindowManager()
     @State private var presentedOrderID: UUID?
+    @State private var toasterID = UUID()
     
     func body(content: Content) -> some View {
         content
@@ -15,9 +16,11 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
                 windowManager.hostSceneDidChange(scene)
             })
             .onAppear {
+                box.attachToaster(id: toasterID)
                 presentCurrentOrder()
             }
             .onDisappear {
+                box.detachToaster(id: toasterID)
                 windowManager.cleanup()
                 // Without a toaster, the toast can't leave on its own, and the box would stall.
                 if let presentedOrderID {
@@ -28,6 +31,9 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
             .onChange(of: box.current?.id) {
                 presentCurrentOrder()
             }
+            .onChange(of: box.activeToasterID) {
+                presentCurrentOrder()
+            }
             .onChange(of: box.isLeaving) { _, isLeaving in
                 if isLeaving {
                     windowManager.hide()
@@ -36,6 +42,8 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
     }
     
     private func presentCurrentOrder() {
+        // Only one toaster presents a box's toasts, so each toast appears once.
+        guard box.activeToasterID == toasterID else { return }
         guard let order = box.current, order.id != presentedOrderID else { return }
         
         presentedOrderID = order.id

@@ -188,4 +188,40 @@ import Testing
         try finishCurrentToast(in: box)
         #expect(box.isEmpty)
     }
+    
+    // MARK: - Toasters
+    
+    @Test func theFirstAttachedToasterPresents() {
+        let box = BreadBox<String>()
+        let first = UUID()
+        let second = UUID()
+        
+        box.attachToaster(id: first)
+        box.attachToaster(id: second)
+        
+        #expect(box.activeToasterID == first)
+    }
+    
+    @Test func theNextToasterTakesOverWhenTheActiveOneDetaches() {
+        let box = BreadBox<String>()
+        let first = UUID()
+        let second = UUID()
+        box.attachToaster(id: first)
+        box.attachToaster(id: second)
+        
+        box.detachToaster(id: first)
+        
+        #expect(box.activeToasterID == second)
+    }
+    
+    @Test func attachingTheSameToasterTwiceKeepsOneEntry() {
+        let box = BreadBox<String>()
+        let toaster = UUID()
+        
+        box.attachToaster(id: toaster)
+        box.attachToaster(id: toaster)
+        box.detachToaster(id: toaster)
+        
+        #expect(box.activeToasterID == nil)
+    }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// A box of bread waiting to be toasted. Put bread in with `toast(_:)`, and a toaster attached with
 /// `preheatToaster(withBreadBox:)` toasts it one slice at a time.
@@ -22,6 +23,9 @@ public final class BreadBox<Bread> {
     private(set) var isPausing = false
 
     private var line: [ToastOrder<Bread>] = []
+    
+    /// The toasters attached to the box, in the order they attached.
+    private var toasterIDs: [UUID] = []
 
     @ObservationIgnored private var pauseTask: Task<Void, Never>?
 
@@ -135,6 +139,28 @@ public final class BreadBox<Bread> {
         }
     }
 
+    /// The toaster that presents the box's toasts: the first attached toaster that's still attached.
+    var activeToasterID: UUID? {
+        toasterIDs.first
+    }
+    
+    /// Called when a toaster for this box appears.
+    func attachToaster(id: UUID) {
+        guard !toasterIDs.contains(id) else { return }
+        toasterIDs.append(id)
+        
+        if toasterIDs.count > 1 {
+            Logger(subsystem: "WarmToast", category: "BreadBox").warning(
+                "A bread box is attached to \(self.toasterIDs.count) toasters at once. Only the first one presents its toasts. Attach each bread box to one toaster."
+            )
+        }
+    }
+    
+    /// Called when a toaster for this box disappears. The next attached toaster, if any, takes over.
+    func detachToaster(id: UUID) {
+        toasterIDs.removeAll { $0 == id }
+    }
+    
     /// The current order, if it's the one with the given ID.
     func order(withID id: UUID) -> ToastOrder<Bread>? {
         current?.id == id ? current : nil
