@@ -13,7 +13,7 @@ final class ToastWindowManager {
     /// A toast waiting for a window, for example while its scene is in the background.
     private struct PendingToast {
         let id = UUID()
-        let makeRootViewController: (UUID, ToastWindow, ToastDismissSignal) -> UIViewController
+        let makeRootViewController: (UUID, ToastDismissSignal) -> UIViewController
         let onDismiss: () -> Void
     }
 
@@ -37,15 +37,12 @@ final class ToastWindowManager {
         tearDown()
 
         pendingToast = PendingToast(
-            makeRootViewController: { [weak self] id, window, signal in
+            makeRootViewController: { [weak self] id, signal in
                 let hostView = ToastWindowHost(
                     dismissSignal: signal,
                     bread: bread,
                     options: options,
                     toast: toast,
-                    onToastFrameChange: { [weak window] frame in
-                        window?.toastFrame = frame
-                    },
                     onDismiss: {
                         self?.toastDidDisappear(presentationID: id)
                     }
@@ -83,7 +80,7 @@ final class ToastWindowManager {
         guard let pendingToast, let toastWindow = windowSource.makeWindow() else { return }
 
         let signal = ToastDismissSignal()
-        toastWindow.rootViewController = pendingToast.makeRootViewController(pendingToast.id, toastWindow, signal)
+        toastWindow.rootViewController = pendingToast.makeRootViewController(pendingToast.id, signal)
         toastWindow.isHidden = false
 
         self.pendingToast = nil

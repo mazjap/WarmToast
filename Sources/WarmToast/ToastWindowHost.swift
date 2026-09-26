@@ -13,7 +13,6 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     let bread: Bread
     let options: ToasterSettings<S>
     let toast: (Bread) -> Toast
-    let onToastFrameChange: (CGRect?) -> Void
     let onDismiss: () -> Void
     
     private let presentationStyle: PresentationStyle
@@ -24,14 +23,12 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
         bread: Bread,
         options: ToasterSettings<S>,
         toast: @escaping (Bread) -> Toast,
-        onToastFrameChange: @escaping (CGRect?) -> Void,
         onDismiss: @escaping () -> Void
     ) {
         self.dismissSignal = dismissSignal
         self.bread = bread
         self.options = options
         self.toast = toast
-        self.onToastFrameChange = onToastFrameChange
         self.onDismiss = onDismiss
         let reduceMotion = UIAccessibility.isReduceMotionEnabled
         self.presentationStyle = options.presentationStyle(reduceMotion: reduceMotion)
@@ -54,9 +51,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                         }
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     )
-                    .background(GeometryReader { proxy in
-                        Color.clear.preference(key: ToastFramePreferenceKey.self, value: proxy.frame(in: .global))
-                    })
+                    .background(ToastHitArea())
                     .offset(y: offset)
                     .simultaneousGesture(
                         // A minimum distance of zero pauses the countdown as soon as the toast is touched.
@@ -87,9 +82,6 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onPreferenceChange(ToastFramePreferenceKey.self) { frame in
-            onToastFrameChange(frame)
-        }
         .onAppear {
             withAnimation(animation) { isVisible = true }
         }
@@ -101,13 +93,5 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     private func dismiss() {
         countdown.cancel()
         withAnimation(animation) { isVisible = false }
-    }
-}
-
-private struct ToastFramePreferenceKey: PreferenceKey {
-    static let defaultValue: CGRect? = nil
-    
-    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
-        value = nextValue() ?? value
     }
 }

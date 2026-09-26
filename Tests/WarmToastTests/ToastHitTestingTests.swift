@@ -31,6 +31,21 @@ import UIKit
         #expect(window.hitTest(CGPoint(x: toastFrame.minX - 1, y: toastFrame.midY), with: nil) == nil)
     }
     
+    @Test func toastFrameAccountsForTheSafeArea() async throws {
+        let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
+        manager.show("Tap me")
+        let window = try #require(manager.window)
+        let hostingController = try #require(window.rootViewController)
+        hostingController.additionalSafeAreaInsets = UIEdgeInsets(top: 60, left: 0, bottom: 0, right: 0)
+        
+        try #require(await waitUntil { (window.toastFrame?.minY ?? 0) >= 60 })
+        let toastFrame = try #require(window.toastFrame)
+        
+        #expect(window.hitTest(CGPoint(x: toastFrame.midX, y: toastFrame.midY), with: nil) != nil)
+        // Where the toast would be without the safe area, touches must pass through.
+        #expect(window.hitTest(CGPoint(x: toastFrame.midX, y: 20), with: nil) == nil)
+    }
+    
     @Test func windowWithoutAToastLetsEveryTouchThrough() {
         let window = ToastWindow(frame: CGRect(x: 0, y: 0, width: 400, height: 800))
         window.rootViewController = UIViewController()
