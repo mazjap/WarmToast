@@ -33,6 +33,15 @@ public struct ToasterSettings: Sendable {
     /// - Note: Defaults to no extra space.
     public var insets: EdgeInsets
     
+    /// What VoiceOver says when the toast appears. Toasters for slices fill this in from the slice's text.
+    /// - Note: Defaults to nil, which announces nothing.
+    public var announcement: String?
+    
+    /// How long the toast stays on screen while VoiceOver is running.
+    /// - Note: Defaults to nil, which is twice `timeTilToasted`. Toasters for slices with a topping keep
+    ///   the toast up until it's dismissed, so there's time to reach the button.
+    public var voiceOverDuration: PresentedDuration?
+    
     /// ToasterSettings initializer. Also see the static methods such as: `toasterStrudel` for built in options.
     /// - Parameters:
     ///   - timeTilToasted: The duration that the toast is shown on screen in seconds. Use `PresentedDuration.indefinitely` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
@@ -61,6 +70,24 @@ public struct ToasterSettings: Sendable {
         self.isSwipable = isSwipable
         self.slot = slot
         self.insets = insets
+    }
+}
+
+// MARK: - Accessibility
+
+extension ToasterSettings {
+    /// How long the toast stays on screen, allowing extra time while VoiceOver is running.
+    func duration(voiceOverRunning: Bool) -> PresentedDuration {
+        guard voiceOverRunning else { return timeTilToasted }
+        if let voiceOverDuration {
+            return voiceOverDuration
+        }
+        switch timeTilToasted {
+        case .indefinitely:
+            return .indefinitely
+        case let .seconds(seconds):
+            return .seconds(seconds * 2)
+        }
     }
 }
 

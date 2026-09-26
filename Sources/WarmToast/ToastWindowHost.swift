@@ -58,6 +58,8 @@ struct ToastWindowHost<Bread, Toast: View>: View {
 
                 toast(order.bread)
                     .environment(\.ejectToast, EjectToastAction { dismiss() })
+                    .accessibilityAction(.escape) { dismiss() }
+                    .accessibilityAction(named: Text("Dismiss")) { dismiss() }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
                     .background(ToastBackgroundView(background: settings.background, accentColor: settings.accentColor))
@@ -86,14 +88,16 @@ struct ToastWindowHost<Bread, Toast: View>: View {
                     .padding(settings.insets)
                     .transition(.toastInsertion(presentationStyle, from: slot.edge, animation: animation))
                     .onAppear {
-                        countdown.start(duration: settings.timeTilToasted, onFinish: dismiss)
+                        startCountdown(settings)
+                        announce(settings)
                     }
                     .onChange(of: order.revision) {
                         // Replaced bread gets the full time of its own settings.
-                        countdown.start(duration: settings.timeTilToasted, onFinish: dismiss)
+                        startCountdown(settings)
                         if isTouching {
                             countdown.pause()
                         }
+                        announce(settings)
                     }
                     .onDisappear {
                         countdown.cancel()
@@ -129,6 +133,16 @@ struct ToastWindowHost<Bread, Toast: View>: View {
         }
     }
 
+    private func startCountdown(_ settings: ToasterSettings) {
+        let duration = settings.duration(voiceOverRunning: UIAccessibility.isVoiceOverRunning)
+        countdown.start(duration: duration, onFinish: dismiss)
+    }
+    
+    private func announce(_ settings: ToasterSettings) {
+        guard let announcement = settings.announcement, !announcement.isEmpty else { return }
+        AccessibilityNotification.Announcement(announcement).post()
+    }
+    
     private func dismiss() {
         countdown.cancel()
         withAnimation(animation) { isVisible = false }

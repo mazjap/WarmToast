@@ -46,9 +46,15 @@ extension Slice: HasRecipe {
 }
 
 extension ToasterSettings {
-    /// The options toasters use for a slice by default: a toaster strudel of the slice's type.
+    /// The options toasters use for a slice by default: a toaster strudel of the slice's type that
+    /// VoiceOver announces. A slice with a topping stays up while VoiceOver is running until it's dismissed.
     public static func toasterStrudel(for slice: Slice) -> ToasterSettings {
-        .toasterStrudel(type: slice.type)
+        var settings = ToasterSettings.toasterStrudel(type: slice.type)
+        settings.announcement = [slice.title, slice.message].compactMap { $0 }.joined(separator: ". ")
+        if slice.topping != nil {
+            settings.voiceOverDuration = .indefinitely
+        }
+        return settings
     }
 }
 
