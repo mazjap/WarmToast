@@ -7,6 +7,7 @@ final class ToastDismissSignal: ObservableObject {
 struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     @State private var isVisible = false
     @State private var offset: CGFloat = .zero
+    @GestureState private var isTouching = false
     @State private var countdown: DismissCountdown
     @ObservedObject var dismissSignal: ToastDismissSignal
     
@@ -56,17 +57,19 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                     .simultaneousGesture(
                         // A minimum distance of zero pauses the countdown as soon as the toast is touched.
                         DragGesture(minimumDistance: 0)
+                            .updating($isTouching) { _, isTouching, _ in
+                                isTouching = true
+                            }
                             .onChanged { value in
-                                countdown.pause()
                                 guard options.isSwipable else { return }
                                 offset = min(0, value.translation.height)
                             }
                             .onEnded { value in
-                                if options.isSwipable && offset < -30 {
+                                // A quick flick can end before any drag update moves the toast, so
+                                // the predicted end of the swipe counts too.
+                                let swipe = min(value.translation.height, value.predictedEndTranslation.height)
+                                if options.isSwipable && swipe < -30 {
                                     dismiss()
-                                } else {
-                                    countdown.resume()
-                                    withAnimation { offset = .zero }
                                 }
                             }
                     )
@@ -87,6 +90,15 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
         }
         .onChange(of: dismissSignal.shouldDismiss, do: { should in
             if should { dismiss() }
+        })
+        .onChange(of: isTouching, do: { isTouching in
+            // Gesture state also resets when the system cancels the touch, which skips onEnded.
+            if isTouching {
+                countdown.pause()
+            } else if isVisible {
+                countdown.resume()
+                withAnimation { offset = .zero }
+            }
         })
     }
     
