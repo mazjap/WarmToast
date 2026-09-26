@@ -3,57 +3,101 @@ import UIKit
 
 @MainActor
 final class ToastWindowManager {
-    private var window: ToastWindow?
+    private let windowSource: ToastWindowSource
+    private var pendingToast: PendingToast?
+    private(set) var window: ToastWindow?
     private var dismissSignal: ToastDismissSignal?
-    
+    private var onDismiss: (() -> Void)?
+
+    /// A toast waiting for a window, for example while its scene is in the background.
+    private struct PendingToast {
+        let makeRootViewController: (ToastDismissSignal) -> UIViewController
+        let onDismiss: () -> Void
+    }
+
+    init(windowSource: ToastWindowSource = SceneToastWindowSource()) {
+        self.windowSource = windowSource
+        windowSource.availabilityDidChange = { [weak self] in
+            self?.presentPendingToastIfPossible()
+        }
+    }
+
+    var isPending: Bool {
+        pendingToast != nil
+    }
+
     func show<Bread, S: ShapeStyle, Toast: View>(
         bread: Bread,
         options: ToasterSettings<S>,
         toast: @escaping (Bread) -> Toast,
         onDismiss: @escaping () -> Void
     ) {
-        if window != nil { tearDown() }
-        
-        guard let scene = UIApplication.shared.connectedScenes
-            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
-        else { return }
-        
-        let signal = ToastDismissSignal()
-        self.dismissSignal = signal
-        
-        let hostView = ToastWindowHost(
-            dismissSignal: signal,
-            bread: bread,
-            options: options,
-            toast: toast,
-            onDismiss: { [weak self] in
-                self?.tearDown()
-                onDismiss()
-            }
+        tearDown()
+
+        pendingToast = PendingToast(
+            makeRootViewController: { [weak self] signal in
+                let hostView = ToastWindowHost(
+                    dismissSignal: signal,
+                    bread: bread,
+                    options: options,
+                    toast: toast,
+                    onDismiss: {
+                        self?.toastDidDisappear()
+                    }
+                )
+
+                let hostingController = UIHostingController(rootView: hostView)
+                hostingController.view.backgroundColor = .clear
+                return hostingController
+            },
+            onDismiss: onDismiss
         )
-        
-        let hostingController = UIHostingController(rootView: hostView)
-        hostingController.view.backgroundColor = .clear
-        
-        let toastWindow = ToastWindow(windowScene: scene)
-        toastWindow.windowLevel = .alert + 1
-        toastWindow.backgroundColor = .clear
-        toastWindow.rootViewController = hostingController
-        toastWindow.isHidden = false
-        self.window = toastWindow
+
+        presentPendingToastIfPossible()
     }
-    
+
     func hide() {
-        dismissSignal?.shouldDismiss = true
+        if let pendingToast {
+            // The toast was never shown, so it's done as soon as it's hidden.
+            tearDown()
+            pendingToast.onDismiss()
+        } else {
+            dismissSignal?.shouldDismiss = true
+        }
     }
-    
+
+    func hostSceneDidChange(_ scene: UIWindowScene?) {
+        windowSource.hostSceneDidChange(scene)
+    }
+
     func cleanup() {
         tearDown()
     }
-    
+
+    private func presentPendingToastIfPossible() {
+        guard let pendingToast, let toastWindow = windowSource.makeWindow() else { return }
+
+        let signal = ToastDismissSignal()
+        toastWindow.rootViewController = pendingToast.makeRootViewController(signal)
+        toastWindow.isHidden = false
+
+        self.pendingToast = nil
+        self.window = toastWindow
+        self.dismissSignal = signal
+        self.onDismiss = pendingToast.onDismiss
+    }
+
+    private func toastDidDisappear() {
+        let onDismiss = onDismiss
+        tearDown()
+        onDismiss?()
+    }
+
     private func tearDown() {
         window?.isHidden = true
         window = nil
         dismissSignal = nil
+        onDismiss = nil
+        pendingToast = nil
     }
 }
