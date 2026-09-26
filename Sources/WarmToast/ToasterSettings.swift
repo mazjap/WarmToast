@@ -28,7 +28,7 @@ public struct ToasterSettings<S: ShapeStyle>: Sendable {
     /// - Parameters:
     ///   - timeTilToasted: The duration that the toast is shown on screen in seconds. Use `PresentedDuration.indefinite` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
     ///   - accentColor: Color applied to the leading edge of the toast. No leading edge color will be shown if nil is provided.
-    ///   - background: The background of the toast. Defaults to `Color.warmToastDefaultBackgroundColor`. `Color.clear` can be used as fits your needs. `warmToastDefaultBackgroundColor` is `UIColor.systemBackground` on iOS/tvOS and `NSColor.windowBackgroundColor` on macOS.
+    ///   - background: The background of the toast. Defaults to `Color.warmToastDefaultBackgroundColor`. `Color.clear` can be used as fits your needs. `warmToastDefaultBackgroundColor` is `UIColor.systemBackground`.
     ///   - presentationStyle: The method with which to insert the toast into the world. `PresentationStyle.slide` will be used if none is provided.
     ///   - animation: The animation to use when presenting the toast.
     ///   - isSwipable: Whether swipe-to-dismiss is enabled on the toast. Defaults to true.
@@ -56,7 +56,7 @@ extension ToasterSettings {
     /// - Parameters:
     ///   - timeTilToasted: The duration that the toast is shown on screen. Use `PresentedDuration.indefinite` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
     ///   - accentColor: Color applied to the leading edge of the toast. No leading edge color will be shown if nil is provided.
-    ///   - background: The background of the toast. Defaults to `Color.warmToastDefaultBackgroundColor`. `Color.clear` can be used as fits your needs. `warmToastDefaultBackgroundColor` is `UIColor.systemBackground` on iOS/tvOS and `NSColor.windowBackgroundColor` on macOS.
+    ///   - background: The background of the toast. Defaults to `Color.warmToastDefaultBackgroundColor`. `Color.clear` can be used as fits your needs. `warmToastDefaultBackgroundColor` is `UIColor.systemBackground`.
     ///   - presentationStyle: The method with which to insert the toast into the world. `PresentationStyle.slide` will be used if none is provided.
     ///   - animation: The animation to use when presenting the toast.
     ///   - isSwipable: Whether swipe-to-dismiss is enabled on the toast. Defaults to true.

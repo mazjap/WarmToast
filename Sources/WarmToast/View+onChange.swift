@@ -2,14 +2,14 @@ import SwiftUI
 import Combine
 
 extension View {
-    /// Cross-platform onChange modifier: uses SwiftUI onChange when available, falls back to legacy for iOS/tvOS 13.
+    /// onChange modifier that uses SwiftUI onChange when available and falls back to a legacy implementation on iOS 13.
     @ViewBuilder
     func onChange<Value: Equatable>(of value: Value, do action: @escaping (Value) -> Void) -> some View {
-        if #available(iOS 17, tvOS 17, *) {
+        if #available(iOS 17, *) {
             self.onChange(of: value, initial: false) { _, new in
                 action(new)
             }
-        } else if #available(iOS 14, tvOS 14, *) {
+        } else if #available(iOS 14, *) {
             self.onChange(of: value, perform: action)
         } else {
             self.modifier(OnChangeLegacyModifier(value: value, action: action))
