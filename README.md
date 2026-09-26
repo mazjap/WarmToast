@@ -43,7 +43,7 @@ Alternatively, add it to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/mazjap/WarmToast.git", from: "0.2.0")
+    .package(url: "https://github.com/mazjap/WarmToast.git", from: "0.2.1")
 ]
 ```
 
@@ -75,7 +75,7 @@ struct ContentView: View {
 
 ### Toast with Custom Content
 
-When the bread is set, the toast pops out. If it changes while it's toasting, the toast shows the new bread.
+When the bread is set, the toast pops out. If it changes while it's toasting, the toast shows the new bread. Changes are noticed for `Equatable` bread, `Identifiable` bread such as `Slice`, and class instances.
 
 ```swift
 @State private var message: String? = nil
@@ -93,6 +93,18 @@ var body: some View {
         Text(message)
             .font(.headline)
     }
+}
+```
+
+VoiceOver reads `String` bread aloud when its toast appears. For other custom content, tell VoiceOver what to say with the options' `announcement`, or the toast is silent:
+
+```swift
+.preheatToaster(withBread: $trip, options: { trip in
+    var options = ToasterSettings.toasterStrudel(type: .success)
+    options.announcement = "\(trip.name) saved"
+    return options
+}) { trip in
+    TripSavedToast(trip: trip)
 }
 ```
 
@@ -289,10 +301,12 @@ The countdown pauses while the user touches or drags the toast, and picks up whe
 
 ### Accessibility
 
-- VoiceOver announces a toast's `announcement` when it appears. Slices fill it in from their text. For custom content, set `options.announcement`.
+- VoiceOver announces a toast's `announcement` when it appears. Slices fill it in from their text, and `String` bread announces itself. For other custom content, set `options.announcement`, or set it to an empty string to announce nothing.
+- A slice's icon is labeled with its type, such as "Warning", so VoiceOver users hear what the icon and color show.
 - Toasts have a Dismiss accessibility action and respond to the escape gesture.
 - While VoiceOver is running, toasts stay up for `voiceOverDuration`, which defaults to twice their usual time. Slices with a topping stay until they're dismissed.
 - With Reduce Motion on, toasts fade in instead of sliding or bouncing.
+- Slice icons, messages and toppings keep enough contrast to read in light and dark mode. The bright type color is used for the accent bar only.
 
 ### Presentation
 
@@ -304,13 +318,15 @@ If that scene isn't active yet (for example, a toast set while the app is in the
 
 Each toaster shows its toasts in a window of its own. When two toasters show a toast at the same time, only one of those windows is exposed to accessibility, so VoiceOver can't move to the other toast, although it's still announced. Use one bread box per screen to avoid this.
 
+Attach each bread box to one toaster. If a box is attached to several at once, only the first one presents its toasts, and a warning is logged. When it disappears, the next one takes over.
+
 ## Migrating from 0.1
 
 - The minimum deployment target is iOS 17.
 - `ToasterSettings` is no longer generic. Replace `ToasterSettings<Color>` with `ToasterSettings`. Backgrounds that are shape styles still work as before, and `.glass` is new.
 - The `timeTilToasted: Double` initializer is gone. Write `timeTilToasted: 3` or `.seconds(duration)`.
 - The settings' properties are now `var`, so you can adjust a strudel in place.
-- Changing `withBread`'s bread while it's toasting now shows the new bread instead of keeping the old one.
+- Changing `withBread`'s bread while it's toasting now shows the new bread instead of keeping the old one. As of 0.2.1, this includes `Slice` and other `Identifiable` bread.
 
 ## Examples
 
