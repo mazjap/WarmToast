@@ -3,7 +3,6 @@ import Foundation
 /// Counts down a toast's time on screen. The countdown can be paused while the user interacts with the toast.
 @MainActor
 final class DismissCountdown {
-    private let duration: PresentedDuration
     private var remaining: TimeInterval = 0
     private var resumedAt: Date?
     private var task: Task<Void, Never>?
@@ -13,19 +12,16 @@ final class DismissCountdown {
         task != nil
     }
 
-    init(duration: PresentedDuration) {
-        self.duration = duration
-    }
-
     deinit {
         task?.cancel()
     }
 
-    /// Starts counting down from the full duration. Does nothing for `PresentedDuration.indefinitely`.
-    func start(onFinish: @escaping () -> Void) {
+    /// Starts counting down from the full duration, replacing any countdown in progress.
+    /// With `PresentedDuration.indefinitely`, it only stops the countdown in progress.
+    func start(duration: PresentedDuration, onFinish: @escaping () -> Void) {
+        cancel()
         guard case let .seconds(seconds) = duration else { return }
 
-        cancel()
         self.onFinish = onFinish
         remaining = seconds
         resume()

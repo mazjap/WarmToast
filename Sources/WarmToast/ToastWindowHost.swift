@@ -5,46 +5,55 @@ final class ToastDismissSignal {
     var shouldDismiss = false
 }
 
+/// The root view of a toast window. It shows one order from a bread box, and updates in place when
+/// that order's bread is replaced.
 struct ToastWindowHost<Bread, Toast: View>: View {
     @State private var isVisible = false
     @State private var offset: CGFloat = .zero
     @GestureState private var isTouching = false
-    @State private var countdown: DismissCountdown
-    let dismissSignal: ToastDismissSignal
-    
-    let bread: Bread
-    let options: ToasterSettings
+    @State private var countdown = DismissCountdown()
+
+    let box: BreadBox<Bread>
+    let orderID: UUID
+    let options: (Bread) -> ToasterSettings
     let toast: (Bread) -> Toast
-    let onDismiss: () -> Void
-    
+    let dismissSignal: ToastDismissSignal
+    let onDisappear: () -> Void
+
     private let presentationStyle: PresentationStyle
     private let animation: Animation
-    
+
     init(
-        dismissSignal: ToastDismissSignal,
-        bread: Bread,
-        options: ToasterSettings,
+        box: BreadBox<Bread>,
+        order: ToastOrder<Bread>,
+        options: @escaping (Bread) -> ToasterSettings,
         toast: @escaping (Bread) -> Toast,
-        onDismiss: @escaping () -> Void
+        dismissSignal: ToastDismissSignal,
+        onDisappear: @escaping () -> Void
     ) {
-        self.dismissSignal = dismissSignal
-        self.bread = bread
+        self.box = box
+        self.orderID = order.id
         self.options = options
         self.toast = toast
-        self.onDismiss = onDismiss
+        self.dismissSignal = dismissSignal
+        self.onDisappear = onDisappear
+
+        // The transition is fixed when the toast appears, even if its bread is replaced later.
+        let settings = order.options ?? options(order.bread)
         let reduceMotion = UIAccessibility.isReduceMotionEnabled
-        self.presentationStyle = options.presentationStyle(reduceMotion: reduceMotion)
-        self.animation = options.presentationAnimation(reduceMotion: reduceMotion)
-        self._countdown = State(initialValue: DismissCountdown(duration: options.timeTilToasted))
+        self.presentationStyle = settings.presentationStyle(reduceMotion: reduceMotion)
+        self.animation = settings.presentationAnimation(reduceMotion: reduceMotion)
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
-            if isVisible {
-                toast(bread)
+            if isVisible, let order = box.order(withID: orderID) {
+                let settings = order.options ?? options(order.bread)
+
+                toast(order.bread)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
-                    .background(ToastBackgroundView(background: options.background, accentColor: options.accentColor))
+                    .background(ToastBackgroundView(background: settings.background, accentColor: settings.accentColor))
                     .background(ToastHitArea())
                     .offset(y: offset)
                     .simultaneousGesture(
@@ -54,25 +63,32 @@ struct ToastWindowHost<Bread, Toast: View>: View {
                                 isTouching = true
                             }
                             .onChanged { value in
-                                guard options.isSwipable else { return }
+                                guard settings.isSwipable else { return }
                                 offset = min(0, value.translation.height)
                             }
                             .onEnded { value in
                                 // A quick flick can end before any drag update moves the toast, so
                                 // the predicted end of the swipe counts too.
                                 let swipe = min(value.translation.height, value.predictedEndTranslation.height)
-                                if options.isSwipable && swipe < -30 {
+                                if settings.isSwipable && swipe < -30 {
                                     dismiss()
                                 }
                             }
                     )
                     .transition(.toastInsertion(presentationStyle, animation: animation))
                     .onAppear {
-                        countdown.start(onFinish: dismiss)
+                        countdown.start(duration: settings.timeTilToasted, onFinish: dismiss)
+                    }
+                    .onChange(of: order.revision) {
+                        // Replaced bread gets the full time of its own settings.
+                        countdown.start(duration: settings.timeTilToasted, onFinish: dismiss)
+                        if isTouching {
+                            countdown.pause()
+                        }
                     }
                     .onDisappear {
                         countdown.cancel()
-                        onDismiss()
+                        onDisappear()
                     }
             }
             Spacer()
@@ -94,7 +110,7 @@ struct ToastWindowHost<Bread, Toast: View>: View {
             }
         }
     }
-    
+
     private func dismiss() {
         countdown.cancel()
         withAnimation(animation) { isVisible = false }

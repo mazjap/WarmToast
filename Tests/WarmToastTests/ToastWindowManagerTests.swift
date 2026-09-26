@@ -95,12 +95,7 @@ import Testing
         let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
         let dismissals = CallCounter()
         
-        manager.show(
-            bread: "Short",
-            options: .toasterStrudel(type: .info, duration: .seconds(0.1)),
-            toast: { Text($0) },
-            onDismiss: dismissals.increment
-        )
+        manager.show("Short", duration: .seconds(0.1), onDismiss: dismissals.increment)
         
         #expect(await waitUntil { dismissals.count == 1 })
         #expect(manager.window == nil)
