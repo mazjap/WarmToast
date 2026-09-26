@@ -91,11 +91,16 @@ public struct ToastedSlice: View {
             .accessibilityElement(children: .combine)
 
             if let topping = slice.topping {
-                Button(topping.title, role: topping.role) {
+                Button(role: topping.role) {
                     topping.action()
                     ejectToast()
+                } label: {
+                    Text(topping.title)
+                        .font(.subheadline.weight(.semibold))
+                        // A comfortable tap target, even though the text is small.
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(.rect)
                 }
-                .font(.subheadline.weight(.semibold))
                 .tint(slice.type?.tint)
             }
         }
