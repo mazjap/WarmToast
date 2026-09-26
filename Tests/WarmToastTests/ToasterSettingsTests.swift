@@ -32,8 +32,9 @@ import Testing
             ToasterSettings(timeTilToasted: 3, background: .regularMaterial),
             ToasterSettings(timeTilToasted: 3, background: LinearGradient(colors: [.red, .blue], startPoint: .top, endPoint: .bottom)),
             ToasterSettings(timeTilToasted: 3),
+            ToasterSettings(timeTilToasted: 3, background: .glass),
         ]
         
-        #expect(settings.count == 4)
+        #expect(settings.count == 5)
     }
 }
