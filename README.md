@@ -3,7 +3,7 @@
 A lightweight toast notification system for SwiftUI applications.
 
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
-[![Platforms](https://img.shields.io/badge/Platforms-iOS%2013+%20|%20macOS%2010.15+%20|%20tvOS%2013+-lightgrey.svg)](https://developer.apple.com/swift/)
+[![Platforms](https://img.shields.io/badge/Platforms-iOS%2013+-lightgrey.svg)](https://developer.apple.com/swift/)
 [![Swift Package Manager](https://img.shields.io/badge/Swift_Package_Manager-compatible-brightgreen.svg)](https://swift.org/package-manager/)
 
 WarmToast makes it incredibly easy to add beautiful, customizable toast notifications to your SwiftUI project. With support for multiple presentation styles, accent colors, and automatic toast queuing, you can enhance your app's user experience with minimal code.
@@ -15,16 +15,17 @@ WarmToast makes it incredibly easy to add beautiful, customizable toast notifica
 - 🎨 **Customizable Styling** - Accent colors, backgrounds, animations, and more
 - 🔄 **Multiple Presentation Styles** - Slide, fade, or scale
 - 📚 **Toast Queuing** - Automatically present a series of toasts one after another
-- 🔄 **Swipeable Dismissal** - Users can swipe to dismiss toasts
+- 👆 **Interactive** - Users can swipe to dismiss toasts, and the countdown pauses while a toast is touched
 - ⏱️ **Flexible Durations** - From quick notifications to indefinite presentation
-- 📱 **Cross-Platform** - Works on iOS, macOS, and tvOS
+- 🪟 **Always On Top** - Toasts appear above sheets and alerts, and touches around them reach your app
+- ♿️ **Reduce Motion** - Toasts fade in instead of sliding when Reduce Motion is on
 - 🎯 **SwiftUI Native** - Built specifically for SwiftUI
 
 ## Requirements
 
-- iOS 13.0+ / macOS 10.15+ / tvOS 13.0+
+- iOS 13.0+
 - Swift 6.0+
-- Xcode 15.0+
+- Xcode 16.0+
 
 ## Installation
 
@@ -95,16 +96,23 @@ var body: some View {
 
 Present multiple toasts one after another:
 
+Each item in the loaf must be `Identifiable`:
+
 ```swift
-@State private var messages: [String] = []
+struct Message: Identifiable {
+    let id = UUID()
+    let text: String
+}
+
+@State private var messages: [Message] = []
 
 var body: some View {
     VStack {
         Button("Show Toasts") {
             messages = [
-                "First notification",
-                "Second notification",
-                "Third notification"
+                Message(text: "First notification"),
+                Message(text: "Second notification"),
+                Message(text: "Third notification")
             ]
         }
     }
@@ -113,7 +121,7 @@ var body: some View {
         options: .toasterStrudel(type: .info, duration: .seconds(2)),
         durationBetweenToasts: 0.5
     ) { message in
-        Text(message)
+        Text(message.text)
     }
 }
 ```
@@ -167,19 +175,13 @@ WarmToast comes with three preset toast types that you can use out of the box:
 .toasterStrudel(type: .warning, duration: .indefinitely)
 ```
 
-### Custom Z-Index
+The countdown pauses while the user touches or drags the toast, and picks up where it left off when they let go.
 
-When working with complex view hierarchies, you might need to adjust the toast's z-index:
+### Presentation
 
-```swift
-.preheatToaster(
-    withBread: $message,
-    options: .toasterStrudel(type: .info),
-    advancedOptions: ToasterInternals(customToastZIndex: 100)
-) { message in
-    Text(message)
-}
-```
+Toasts are shown in their own window above the rest of your app, including sheets and alerts, in the window scene of the view you attach the toaster to. Touches on the toast go to the toast, and touches anywhere else go to your app.
+
+If that scene isn't active yet (for example, a toast set while the app is in the background), the toast waits and appears once the scene becomes active.
 
 ## Examples
 
@@ -187,6 +189,8 @@ Check out the project's preview providers for more examples of how to use WarmTo
 
 - `Toaster_Previews`: For basic toast usage
 - `AutomatedLoafToaster_Previews`: For working with toast queues
+
+The `Demo` folder contains a small app, `Demo/WarmToastDemo.xcodeproj`, whose UI tests check toasts in a real app: touches, swiping, the countdown pausing while a toast is held, and toasts queued while the app is in the background.
 
 ## License
 

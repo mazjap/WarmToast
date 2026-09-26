@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: ViewModifier {
-    @State private var isAppearing = true
+    @State private var scheduler = LoafScheduler()
     @State private var currentlyToasting: Bread? = nil
     @Binding private var loaf: [Bread]
     
@@ -29,36 +29,21 @@ struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: Vi
                 options: options,
                 toast: toast,
                 onDisappear: {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) {
-                        decideWhetherToMakeMoreToastNowOrLater()
-                    }
+                    scheduler.toastDidFinish(pause: durationBetweenToasts, then: makeMoreToast)
                 }
             ))
             .onAppear {
-                isAppearing = false
-                decideWhetherToMakeMoreToastNowOrLater()
+                scheduler.advance(startNext: makeMoreToast)
             }
-            .onChange(of: loaf.map(\.id)) { _ in
-                if currentlyToasting == nil && !loaf.isEmpty && !isAppearing {
-                    decideWhetherToMakeMoreToastNowOrLater()
-                }
-            }
+            .onChange(of: loaf.map(\.id), do: { _ in
+                scheduler.advance(startNext: makeMoreToast)
+            })
     }
     
-    private func decideWhetherToMakeMoreToastNowOrLater() {
-        if currentlyToasting == nil {
-            makeMoreToast()
-        } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + durationBetweenToasts) {
-                makeMoreToast()
-            }
-        }
-    }
-    
-    private func makeMoreToast() {
-        if !loaf.isEmpty {
-            currentlyToasting = loaf.removeFirst()
-        }
+    private func makeMoreToast() -> Bool {
+        guard !loaf.isEmpty else { return false }
+        currentlyToasting = loaf.removeFirst()
+        return true
     }
 }
 

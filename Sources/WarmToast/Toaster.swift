@@ -17,26 +17,30 @@ struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
     
     func body(content: Content) -> some View {
         content
+            .background(SceneReader { scene in
+                windowManager.hostSceneDidChange(scene)
+            })
             .onAppear {
                 guard let bread else { return }
-                windowManager.show(bread: bread, options: options, toast: toast, onDismiss: {
-                    self.bread = nil
-                    self.onDisappear?()
-                })
+                show(bread)
             }
             .onDisappear {
                 windowManager.cleanup()
             }
             .onChange(of: bread != nil, do: { isNonNil in
                 if isNonNil, let currentBread = bread {
-                    windowManager.show(bread: currentBread, options: options, toast: toast, onDismiss: {
-                        self.bread = nil
-                        self.onDisappear?()
-                    })
+                    show(currentBread)
                 } else {
                     windowManager.hide()
                 }
             })
+    }
+
+    private func show(_ bread: Bread) {
+        windowManager.show(bread: bread, options: options, toast: toast, onDismiss: {
+            self.bread = nil
+            self.onDisappear?()
+        })
     }
 }
 
