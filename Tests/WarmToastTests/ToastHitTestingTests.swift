@@ -7,6 +7,7 @@ import UIKit
     @Test func touchesOnTheToastReachIt() async throws {
         let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
         manager.show("Tap me")
+        try #require(await waitUntil { manager.window != nil })
         let window = try #require(manager.window)
         
         let reportedFrame = await waitUntil { window.toastFrame != nil }
@@ -22,6 +23,7 @@ import UIKit
     @Test func touchesAroundTheToastPassThrough() async throws {
         let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
         manager.show("Tap me")
+        try #require(await waitUntil { manager.window != nil })
         let window = try #require(manager.window)
         
         try #require(await waitUntil { window.toastFrame != nil })
@@ -34,6 +36,7 @@ import UIKit
     @Test func toastFrameAccountsForTheSafeArea() async throws {
         let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
         manager.show("Tap me")
+        try #require(await waitUntil { manager.window != nil })
         let window = try #require(manager.window)
         let hostingController = try #require(window.rootViewController)
         hostingController.additionalSafeAreaInsets = UIEdgeInsets(top: 60, left: 0, bottom: 0, right: 0)

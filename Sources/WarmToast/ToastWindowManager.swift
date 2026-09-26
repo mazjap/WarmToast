@@ -17,7 +17,12 @@ final class ToastWindowManager {
         let onDismiss: () -> Void
     }
 
-    init(windowSource: ToastWindowSource = SceneToastWindowSource()) {
+    /// Makes the window source for managers created without one. Tests replace it to present toasts
+    /// without a real window scene.
+    static var makeDefaultWindowSource: () -> ToastWindowSource = { SceneToastWindowSource() }
+
+    init(windowSource: ToastWindowSource? = nil) {
+        let windowSource = windowSource ?? Self.makeDefaultWindowSource()
         self.windowSource = windowSource
         windowSource.availabilityDidChange = { [weak self] in
             self?.presentPendingToastIfPossible()
@@ -28,25 +33,21 @@ final class ToastWindowManager {
         pendingToast != nil
     }
 
-    func show<Bread, S: ShapeStyle, Toast: View>(
-        bread: Bread,
-        options: ToasterSettings<S>,
-        toast: @escaping (Bread) -> Toast,
-        onDismiss: @escaping () -> Void
+    /// Shows a toast in a new window, replacing any toast this manager is showing.
+    /// - Parameters:
+    ///   - onDismiss: Called once the toast has left the screen, or when a toast that never got a window is hidden.
+    ///   - makeHost: Builds the window's root view. The view must call `didDisappear` when the toast leaves the screen.
+    func show<Host: View>(
+        onDismiss: @escaping () -> Void,
+        makeHost: @escaping (_ dismissSignal: ToastDismissSignal, _ didDisappear: @escaping () -> Void) -> Host
     ) {
         tearDown()
 
         pendingToast = PendingToast(
             makeRootViewController: { [weak self] id, signal in
-                let hostView = ToastWindowHost(
-                    dismissSignal: signal,
-                    bread: bread,
-                    options: options,
-                    toast: toast,
-                    onDismiss: {
-                        self?.toastDidDisappear(presentationID: id)
-                    }
-                )
+                let hostView = makeHost(signal) {
+                    self?.toastDidDisappear(presentationID: id)
+                }
 
                 let hostingController = UIHostingController(rootView: hostView)
                 hostingController.view.backgroundColor = .clear
@@ -55,7 +56,13 @@ final class ToastWindowManager {
             onDismiss: onDismiss
         )
 
-        presentPendingToastIfPossible()
+        // Toasts are usually shown from a SwiftUI update, such as a view's first onAppear. A window
+        // created in the middle of one can stay blank, so it's created on the next turn of the run loop.
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                self?.presentPendingToastIfPossible()
+            }
+        }
     }
 
     func hide() {

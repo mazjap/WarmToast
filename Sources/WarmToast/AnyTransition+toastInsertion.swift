@@ -1,10 +1,10 @@
 import SwiftUI
 
 extension AnyTransition {
-    static func toastInsertion(_ style: PresentationStyle, animation: Animation) -> AnyTransition {
+    static func toastInsertion(_ style: PresentationStyle, from edge: Edge, animation: Animation) -> AnyTransition {
         switch style {
         case .slide:
-            .move(edge: .top).combined(with: .opacity).animation(animation)
+            .move(edge: edge).combined(with: .opacity).animation(animation)
         case .fade:
             .opacity.animation(animation)
         case .scale:

@@ -1,57 +1,68 @@
 import SwiftUI
 
-final class ToastDismissSignal: ObservableObject {
-    @Published var shouldDismiss = false
+@Observable
+final class ToastDismissSignal {
+    var shouldDismiss = false
 }
 
-struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
+/// The root view of a toast window. It shows one order from a bread box, and updates in place when
+/// that order's bread is replaced.
+struct ToastWindowHost<Bread, Toast: View>: View {
     @State private var isVisible = false
     @State private var offset: CGFloat = .zero
     @GestureState private var isTouching = false
-    @State private var countdown: DismissCountdown
-    @ObservedObject var dismissSignal: ToastDismissSignal
-    
-    let bread: Bread
-    let options: ToasterSettings<S>
+    @State private var countdown = DismissCountdown()
+
+    let box: BreadBox<Bread>
+    let orderID: UUID
+    let options: (Bread) -> ToasterSettings
     let toast: (Bread) -> Toast
-    let onDismiss: () -> Void
-    
+    let dismissSignal: ToastDismissSignal
+    let onDisappear: () -> Void
+
     private let presentationStyle: PresentationStyle
     private let animation: Animation
-    
+    private let slot: ToasterSlot
+
     init(
-        dismissSignal: ToastDismissSignal,
-        bread: Bread,
-        options: ToasterSettings<S>,
+        box: BreadBox<Bread>,
+        order: ToastOrder<Bread>,
+        options: @escaping (Bread) -> ToasterSettings,
         toast: @escaping (Bread) -> Toast,
-        onDismiss: @escaping () -> Void
+        dismissSignal: ToastDismissSignal,
+        onDisappear: @escaping () -> Void
     ) {
-        self.dismissSignal = dismissSignal
-        self.bread = bread
+        self.box = box
+        self.orderID = order.id
         self.options = options
         self.toast = toast
-        self.onDismiss = onDismiss
+        self.dismissSignal = dismissSignal
+        self.onDisappear = onDisappear
+
+        // The transition is fixed when the toast appears, even if its bread is replaced later.
+        let settings = order.options ?? options(order.bread)
         let reduceMotion = UIAccessibility.isReduceMotionEnabled
-        self.presentationStyle = options.presentationStyle(reduceMotion: reduceMotion)
-        self.animation = options.presentationAnimation(reduceMotion: reduceMotion)
-        self._countdown = State(initialValue: DismissCountdown(duration: options.timeTilToasted))
+        self.presentationStyle = settings.presentationStyle(reduceMotion: reduceMotion)
+        self.animation = settings.presentationAnimation(reduceMotion: reduceMotion)
+        self.slot = settings.slot
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
-            if isVisible {
-                toast(bread)
+            if slot == .bottom {
+                Spacer()
+            }
+            
+            if isVisible, let order = box.order(withID: orderID) {
+                let settings = order.options ?? options(order.bread)
+
+                toast(order.bread)
+                    .environment(\.ejectToast, EjectToastAction { dismiss() })
+                    .accessibilityAction(.escape) { dismiss() }
+                    .accessibilityAction(named: Text("Dismiss")) { dismiss() }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
-                    .background(
-                        HStack(spacing: 0) {
-                            if let accent = options.accentColor {
-                                accent.frame(width: 8)
-                            }
-                            Rectangle().fill(options.background)
-                        }
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    )
+                    .background(ToastBackgroundView(background: settings.background, accentColor: settings.accentColor))
                     .background(ToastHitArea())
                     .offset(y: offset)
                     .simultaneousGesture(
@@ -61,37 +72,57 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                                 isTouching = true
                             }
                             .onChanged { value in
-                                guard options.isSwipable else { return }
-                                offset = min(0, value.translation.height)
+                                guard settings.isSwipable else { return }
+                                offset = slot.offset(forDrag: value.translation.height)
                             }
                             .onEnded { value in
-                                // A quick flick can end before any drag update moves the toast, so
-                                // the predicted end of the swipe counts too.
-                                let swipe = min(value.translation.height, value.predictedEndTranslation.height)
-                                if options.isSwipable && swipe < -30 {
+                                let isDismissal = slot.isDismissal(
+                                    translation: value.translation.height,
+                                    predictedEndTranslation: value.predictedEndTranslation.height
+                                )
+                                if settings.isSwipable && isDismissal {
                                     dismiss()
                                 }
                             }
                     )
-                    .transition(.toastInsertion(presentationStyle, animation: animation))
+                    .padding(settings.insets)
+                    .transition(.toastInsertion(presentationStyle, from: slot.edge, animation: animation))
                     .onAppear {
-                        countdown.start(onFinish: dismiss)
+                        startCountdown(settings)
+                        announce(settings)
+                    }
+                    .onChange(of: order.revision) {
+                        // Replaced bread gets the full time of its own settings.
+                        startCountdown(settings)
+                        if isTouching {
+                            countdown.pause()
+                        }
+                        announce(settings)
                     }
                     .onDisappear {
                         countdown.cancel()
-                        onDismiss()
+                        onDisappear()
                     }
             }
-            Spacer()
+            
+            if slot == .top {
+                Spacer()
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
+            // A toast dismissed before its window first rendered never appears, so onChange
+            // below never sees the dismissal. It's done straight away.
+            guard !dismissSignal.shouldDismiss else {
+                onDisappear()
+                return
+            }
             withAnimation(animation) { isVisible = true }
         }
-        .onChange(of: dismissSignal.shouldDismiss, do: { should in
-            if should { dismiss() }
-        })
-        .onChange(of: isTouching, do: { isTouching in
+        .onChange(of: dismissSignal.shouldDismiss) { _, shouldDismiss in
+            if shouldDismiss { dismiss() }
+        }
+        .onChange(of: isTouching) { _, isTouching in
             // Gesture state also resets when the system cancels the touch, which skips onEnded.
             if isTouching {
                 countdown.pause()
@@ -99,7 +130,17 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                 countdown.resume()
                 withAnimation { offset = .zero }
             }
-        })
+        }
+    }
+
+    private func startCountdown(_ settings: ToasterSettings) {
+        let duration = settings.duration(voiceOverRunning: UIAccessibility.isVoiceOverRunning)
+        countdown.start(duration: duration, onFinish: dismiss)
+    }
+    
+    private func announce(_ settings: ToasterSettings) {
+        guard let announcement = settings.announcement, !announcement.isEmpty else { return }
+        AccessibilityNotification.Announcement(announcement).post()
     }
     
     private func dismiss() {

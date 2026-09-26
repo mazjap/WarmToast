@@ -11,6 +11,12 @@ final class ToastWindow: UIWindow {
         return toastHitArea.convert(toastHitArea.bounds, to: self)
     }
 
+    /// A toast window never takes key status from the app's window. A window shown while the scene has
+    /// no key window, such as during launch, would otherwise become key.
+    override var canBecomeKey: Bool {
+        false
+    }
+    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         // SwiftUI can draw content directly in the hosting view, so the hit view alone can't tell
         // the toast apart from the transparent space around it. Touches outside the toast's frame
