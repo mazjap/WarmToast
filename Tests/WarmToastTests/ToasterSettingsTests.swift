@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Testing
 @testable import WarmToast
 
@@ -36,5 +37,21 @@ import Testing
         ]
         
         #expect(settings.count == 5)
+    }
+}
+
+@Suite struct StrudelTypeTests {
+    @Test func successStrudelIsGreen() {
+        #expect(ToasterSettings.toasterStrudel(type: .success).accentColor == .green)
+    }
+    
+    @Test func everyTypeHasASymbolThatExists() {
+        for type in ToasterSettings.StrudelType.allCases {
+            #expect(UIImage(systemName: type.symbolName) != nil, "\(type) uses a missing symbol")
+        }
+    }
+    
+    @Test func plainStrudelHasNoAccent() {
+        #expect(ToasterSettings.toasterStrudel(type: nil).accentColor == nil)
     }
 }

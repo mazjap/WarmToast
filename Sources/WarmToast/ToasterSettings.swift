@@ -96,29 +96,39 @@ extension ToasterSettings {
 // MARK: - Static properties
 
 extension ToasterSettings {
-    public enum StrudelType {
+    /// The kind of news a toast brings, which sets its tint and icon.
+    public enum StrudelType: Sendable, CaseIterable {
         case error
         case warning
         case info
+        case success
+        
+        /// The color of the toast's accent bar and icon.
+        public var tint: Color {
+            switch self {
+            case .error: .red
+            case .warning: .yellow
+            case .info: .blue
+            case .success: .green
+            }
+        }
+        
+        /// The name of the SF Symbol that represents the type.
+        public var symbolName: String {
+            switch self {
+            case .error: "exclamationmark.octagon.fill"
+            case .warning: "exclamationmark.triangle.fill"
+            case .info: "info.circle.fill"
+            case .success: "checkmark.circle.fill"
+            }
+        }
     }
     
+    /// Ready-made settings with the type's accent color and a bouncy animation.
     public static func toasterStrudel(type: StrudelType?, duration: PresentedDuration = .seconds(5)) -> ToasterSettings {
-        let accentColor: Color? = {
-            switch type {
-            case .error:
-                .red
-            case .warning:
-                .yellow
-            case .info:
-                .blue
-            case .none:
-                nil
-            }
-        }()
-        
-        return ToasterSettings(
+        ToasterSettings(
             timeTilToasted: duration,
-            accentColor: accentColor,
+            accentColor: type?.tint,
             animation: .bouncy
         )
     }
