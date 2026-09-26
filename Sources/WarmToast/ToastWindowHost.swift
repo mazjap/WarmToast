@@ -95,6 +95,12 @@ struct ToastWindowHost<Bread, Toast: View>: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
+            // A toast dismissed before its window first rendered never appears, so onChange
+            // below never sees the dismissal. It's done straight away.
+            guard !dismissSignal.shouldDismiss else {
+                onDisappear()
+                return
+            }
             withAnimation(animation) { isVisible = true }
         }
         .onChange(of: dismissSignal.shouldDismiss) { _, shouldDismiss in

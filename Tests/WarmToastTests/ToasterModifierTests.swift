@@ -66,6 +66,26 @@ import Testing
         #expect(await waitUntil { box.toasting == "B" })
     }
     
+    @Test func ejectingBeforeTheToastRendersStillEndsIt() async throws {
+        // Regression: a dismissal requested before the toast window's first render was never seen,
+        // so the toast stayed up and the box stalled.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        try await Task.sleep(for: .milliseconds(100))
+        
+        box.toast("A")
+        #expect(await waitUntil { harness.source.madeWindows.count == 1 })
+        box.eject()
+        
+        #expect(await waitUntil { box.isEmpty })
+        #expect(await waitUntil { harness.visibleToastWindow == nil })
+    }
+    
+    // MARK: - Bread binding
+    
     @Test func bindingIsClearedWhenTheToastLeaves() async throws {
         let bread = BindingBox<String?>(nil)
         let harness = ToasterHarness {
