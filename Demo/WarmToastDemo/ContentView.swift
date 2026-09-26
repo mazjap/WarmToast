@@ -49,6 +49,15 @@ struct ContentView: View {
             }
             .accessibilityIdentifier("showToppingSlice")
 
+            HStack(spacing: 16) {
+                ForEach(ToasterSettings.StrudelType.allCases, id: \.self) { type in
+                    Button("\(type)") {
+                        sliceBox.toast(Slice("Sync \(type)", message: "Tap Retry to try again", type: type, topping: Topping("Retry") {}))
+                    }
+                    .accessibilityIdentifier("showToppingSlice-\(type)")
+                }
+            }
+            
             Button("Show bottom slice") {
                 sliceBox.toast(Self.downloadFinished, options: Self.bottomGlass(for: Self.downloadFinished))
             }
@@ -73,6 +82,8 @@ struct ContentView: View {
 
             Spacer()
         }
+        // Text-colored controls, so the accessibility audit's contrast check is about the toasts.
+        .tint(.primary)
         .frame(maxWidth: .infinity)
         .onAppear {
             // One toast each: only one toast window at a time is exposed to accessibility.
