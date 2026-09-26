@@ -17,6 +17,21 @@ extension View {
     ) -> some View {
         self.modifier(BreadToaster(bread: bread, options: { _ in options }, toast: toast))
     }
+    
+    /// Warm up the toaster, with options chosen for each piece of bread.
+    /// - Parameters:
+    ///   - bread: Optional item as source of truth for presenting the toast. When non-nil, toast pops out of the toaster. When nil, the toast is removed from the view-hierarchy.
+    ///     If the bread changes while it's being toasted, the toast shows the new bread. Changes are noticed for `Equatable` bread and class instances.
+    ///   - options: Picks the toaster options for a piece of bread, such as `.toasterStrudel(type: .error)` for a failure.
+    ///   - toast: A view closure that turns bread into toast.
+    /// - Returns: Your view with a toaster attached, just out of sight.
+    public func preheatToaster<Bread, Toast: View>(
+        withBread bread: Binding<Bread?>,
+        options: @escaping (Bread) -> ToasterSettings,
+        @ViewBuilder toast: @escaping (Bread) -> Toast
+    ) -> some View {
+        self.modifier(BreadToaster(bread: bread, options: options, toast: toast))
+    }
 
     /// Warm up the toaster to prepare for presentation.
     /// - Parameters:
@@ -64,6 +79,27 @@ extension View {
             toast: toast
         ))
     }
+    
+    /// Warm up the toaster, with options chosen for each slice of the loaf.
+    /// - Parameters:
+    ///   - loaf: A queue of items to toast one at a time. Each item is removed from the loaf when it's toasted.
+    ///   - options: Picks the toaster options for a slice, such as `.toasterStrudel(type: .error)` for a failure.
+    ///   - durationBetweenToasts: The time before the next toast is presented after one has dismissed in seconds. Defaults to 0.1.
+    ///   - toast: A view closure that turns bread into toast.
+    /// - Returns: Your view with a toaster attached, just out of sight.
+    public func preheatToaster<Bread: Identifiable, Toast: View>(
+        withLoaf loaf: Binding<[Bread]>,
+        options: @escaping (Bread) -> ToasterSettings,
+        durationBetweenToasts: TimeInterval = 0.1,
+        @ViewBuilder toast: @escaping (Bread) -> Toast
+    ) -> some View {
+        self.modifier(LoafToaster(
+            loaf: loaf,
+            durationBetweenToasts: durationBetweenToasts,
+            options: options,
+            toast: toast
+        ))
+    }
 }
 
 // MARK: - Public bread box toasting API
@@ -81,5 +117,19 @@ extension View {
         @ViewBuilder toast: @escaping (Bread) -> Toast
     ) -> some View {
         self.modifier(BreadBoxToaster(box: breadBox, options: { _ in options }, toast: toast))
+    }
+    
+    /// Warm up the toaster to toast the bread from a bread box, with options chosen for each piece of bread.
+    /// - Parameters:
+    ///   - breadBox: The box to take bread from. Put bread in with `BreadBox.toast(_:options:recipe:ifDuplicate:)`.
+    ///   - options: Picks the toaster options for bread that was put in the box without its own.
+    ///   - toast: A view closure that turns bread into toast.
+    /// - Returns: Your view with a toaster attached, just out of sight.
+    public func preheatToaster<Bread, Toast: View>(
+        withBreadBox breadBox: BreadBox<Bread>,
+        options: @escaping (Bread) -> ToasterSettings,
+        @ViewBuilder toast: @escaping (Bread) -> Toast
+    ) -> some View {
+        self.modifier(BreadBoxToaster(box: breadBox, options: options, toast: toast))
     }
 }

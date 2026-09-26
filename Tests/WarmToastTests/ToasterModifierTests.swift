@@ -84,6 +84,37 @@ import Testing
         #expect(await waitUntil { harness.visibleToastWindow == nil })
     }
     
+    @Test func eachPieceOfBreadCanHaveItsOwnOptions() async throws {
+        // Short bread leaves on its own; long bread stays until ejected.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(
+                withBreadBox: box,
+                options: { bread in .toasterStrudel(type: .info, duration: bread == "short" ? .seconds(0.1) : .indefinitely) }
+            ) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("short")
+        box.toast("long")
+        
+        #expect(await waitUntil { box.toasting == "long" })
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(box.toasting == "long")
+    }
+    
+    @Test func optionsPutInTheBoxWinOverTheToastersOptions() async throws {
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("A", options: .toasterStrudel(type: .success, duration: .seconds(0.1)))
+        
+        #expect(await waitUntil { box.isEmpty })
+    }
+    
     // MARK: - Bread binding
     
     @Test func bindingIsClearedWhenTheToastLeaves() async throws {
