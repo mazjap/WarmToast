@@ -215,6 +215,24 @@ import Testing
         #expect(harness.source.madeWindows.count == 1)
     }
     
+    @Test func changingASliceBindingShowsTheNewSlice() async throws {
+        // Regression: Slice isn't Equatable, so the change went unnoticed and the new slice was lost.
+        let slice = BindingBox<Slice?>(nil)
+        let harness = ToasterHarness {
+            SliceStateHost(remote: slice) { Color.clear.preheatToaster(withBread: $0) { _ in .toasterStrudel(type: .info, duration: .indefinitely) } }
+        }
+        defer { harness.tearDown() }
+        
+        slice.value = Slice("First")
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+        let firstFrame = try #require(harness.visibleToastWindow?.toastFrame)
+        
+        slice.value = Slice("A much longer second slice")
+        
+        #expect(await waitUntil { (harness.visibleToastWindow?.toastFrame?.width ?? 0) > firstFrame.width })
+        #expect(slice.value?.title == "A much longer second slice")
+    }
+    
     @Test func breadSetBeforeTheViewAppearsIsToasted() async throws {
         // Regression: a toast window created during the presenting view's first appearance never rendered.
         let bread = BindingBox<String?>("Welcome back")
@@ -318,6 +336,33 @@ private struct SelfEjectingToast: View {
                 try? await Task.sleep(for: .milliseconds(100))
                 ejectToast()
             }
+    }
+}
+
+/// Owns a slice in `@State` and keeps it in sync with `remote`, by id because slices aren't `Equatable`.
+private struct SliceStateHost<Content: View>: View {
+    let remote: BindingBox<Slice?>
+    let content: (Binding<Slice?>) -> Content
+    private let initialID: Slice.ID?
+    @State private var slice: Slice?
+    
+    init(remote: BindingBox<Slice?>, @ViewBuilder content: @escaping (Binding<Slice?>) -> Content) {
+        self.remote = remote
+        self.content = content
+        self.initialID = remote.value?.id
+        self._slice = State(initialValue: remote.value)
+    }
+    
+    var body: some View {
+        content($slice)
+            .onAppear {
+                // Only a change made after init. The content may already have changed the value itself.
+                if remote.value?.id != initialID {
+                    slice = remote.value
+                }
+            }
+            .onChange(of: remote.value?.id) { slice = remote.value }
+            .onChange(of: slice?.id) { remote.value = slice }
     }
 }
 

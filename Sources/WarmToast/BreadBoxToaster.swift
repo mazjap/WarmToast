@@ -142,8 +142,8 @@ struct LoafToaster<Bread: Identifiable, Toast: View>: ViewModifier {
 
 /// Compares bread for `onChange`, even when the bread type isn't `Equatable`.
 ///
-/// `Equatable` bread is compared by value and class instances by identity. Other bread can only be told
-/// apart from nil, so replacing it with different bread isn't noticed.
+/// `Equatable` bread is compared by value, `Identifiable` bread by id, and class instances by identity.
+/// Other bread can only be told apart from nil, so replacing it with different bread isn't noticed.
 struct BreadIdentity<Bread>: Equatable {
     let bread: Bread?
     
@@ -166,6 +166,9 @@ struct BreadIdentity<Bread>: Equatable {
         if let lhs = lhs as? any Equatable {
             return lhs.isEqual(to: rhs)
         }
+        if let lhs = lhs as? any Identifiable {
+            return lhs.hasSameID(as: rhs)
+        }
         if type(of: lhs) is AnyClass {
             return (lhs as AnyObject) === (rhs as AnyObject)
         }
@@ -176,5 +179,12 @@ struct BreadIdentity<Bread>: Equatable {
 private extension Equatable {
     func isEqual(to other: Any) -> Bool {
         (other as? Self) == self
+    }
+}
+
+private extension Identifiable {
+    func hasSameID(as other: Any) -> Bool {
+        guard let other = other as? Self else { return false }
+        return id == other.id
     }
 }
