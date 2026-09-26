@@ -89,7 +89,7 @@ struct ToastWindowHost<Bread, Toast: View>: View {
                     .transition(.toastInsertion(presentationStyle, from: slot.edge, animation: animation))
                     .onAppear {
                         startCountdown(settings)
-                        announce(settings)
+                        announce(order.bread, settings: settings)
                     }
                     .onChange(of: order.revision) {
                         // Replaced bread gets the full time of its own settings.
@@ -97,7 +97,7 @@ struct ToastWindowHost<Bread, Toast: View>: View {
                         if isTouching {
                             countdown.pause()
                         }
-                        announce(settings)
+                        announce(order.bread, settings: settings)
                     }
                     .onDisappear {
                         countdown.cancel()
@@ -138,8 +138,8 @@ struct ToastWindowHost<Bread, Toast: View>: View {
         countdown.start(duration: duration, onFinish: dismiss)
     }
     
-    private func announce(_ settings: ToasterSettings) {
-        guard let announcement = settings.announcement, !announcement.isEmpty else { return }
+    private func announce(_ bread: Bread, settings: ToasterSettings) {
+        guard let announcement = settings.announcement(for: bread) else { return }
         AccessibilityNotification.Announcement(announcement).post()
     }
     

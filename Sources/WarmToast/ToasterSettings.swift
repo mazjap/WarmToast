@@ -34,7 +34,8 @@ public struct ToasterSettings: Sendable {
     public var insets: EdgeInsets
     
     /// What VoiceOver says when the toast appears. Toasters for slices fill this in from the slice's text.
-    /// - Note: Defaults to nil, which announces nothing.
+    /// - Note: Defaults to nil, which announces `String` bread itself and nothing for other bread. Set it
+    ///   to an empty string to announce nothing.
     public var announcement: String?
     
     /// How long the toast stays on screen while VoiceOver is running.
@@ -76,6 +77,15 @@ public struct ToasterSettings: Sendable {
 // MARK: - Accessibility
 
 extension ToasterSettings {
+    /// What VoiceOver says when a toast of this bread appears, or nil to say nothing.
+    func announcement(for bread: Any) -> String? {
+        if let announcement {
+            return announcement.isEmpty ? nil : announcement
+        }
+        guard let text = bread as? String, !text.isEmpty else { return nil }
+        return text
+    }
+    
     /// How long the toast stays on screen, allowing extra time while VoiceOver is running.
     func duration(voiceOverRunning: Bool) -> PresentedDuration {
         guard voiceOverRunning else { return timeTilToasted }
