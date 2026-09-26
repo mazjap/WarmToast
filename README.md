@@ -190,6 +190,8 @@ Check out the project's preview providers for more examples of how to use WarmTo
 - `Toaster_Previews`: For basic toast usage
 - `AutomatedLoafToaster_Previews`: For working with toast queues
 
+The `Demo` folder contains a small app, `Demo/WarmToastDemo.xcodeproj`, whose UI tests check toasts in a real app: touches, swiping, the countdown pausing while a toast is held, and toasts queued while the app is in the background.
+
 ## License
 
 WarmToast is available under the MIT license. See the [LICENSE](LICENSE) file for more info.
