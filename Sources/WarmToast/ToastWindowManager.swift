@@ -6,12 +6,14 @@ final class ToastWindowManager {
     private let windowSource: ToastWindowSource
     private var pendingToast: PendingToast?
     private(set) var window: ToastWindow?
+    private(set) var presentationID: UUID?
     private var dismissSignal: ToastDismissSignal?
     private var onDismiss: (() -> Void)?
 
     /// A toast waiting for a window, for example while its scene is in the background.
     private struct PendingToast {
-        let makeRootViewController: (ToastDismissSignal) -> UIViewController
+        let id = UUID()
+        let makeRootViewController: (UUID, ToastDismissSignal) -> UIViewController
         let onDismiss: () -> Void
     }
 
@@ -35,14 +37,14 @@ final class ToastWindowManager {
         tearDown()
 
         pendingToast = PendingToast(
-            makeRootViewController: { [weak self] signal in
+            makeRootViewController: { [weak self] id, signal in
                 let hostView = ToastWindowHost(
                     dismissSignal: signal,
                     bread: bread,
                     options: options,
                     toast: toast,
                     onDismiss: {
-                        self?.toastDidDisappear()
+                        self?.toastDidDisappear(presentationID: id)
                     }
                 )
 
@@ -78,16 +80,21 @@ final class ToastWindowManager {
         guard let pendingToast, let toastWindow = windowSource.makeWindow() else { return }
 
         let signal = ToastDismissSignal()
-        toastWindow.rootViewController = pendingToast.makeRootViewController(signal)
+        toastWindow.rootViewController = pendingToast.makeRootViewController(pendingToast.id, signal)
         toastWindow.isHidden = false
 
         self.pendingToast = nil
         self.window = toastWindow
+        self.presentationID = pendingToast.id
         self.dismissSignal = signal
         self.onDismiss = pendingToast.onDismiss
     }
 
-    private func toastDidDisappear() {
+    /// Called when a toast's content leaves the screen.
+    func toastDidDisappear(presentationID id: UUID) {
+        // A replaced window can report its disappearance after the next toast is already up.
+        guard id == presentationID else { return }
+        
         let onDismiss = onDismiss
         tearDown()
         onDismiss?()
@@ -96,6 +103,7 @@ final class ToastWindowManager {
     private func tearDown() {
         window?.isHidden = true
         window = nil
+        presentationID = nil
         dismissSignal = nil
         onDismiss = nil
         pendingToast = nil

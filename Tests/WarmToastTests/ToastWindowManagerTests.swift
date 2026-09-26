@@ -57,4 +57,36 @@ import Testing
         #expect(manager.window == nil)
         #expect(!manager.isPending)
     }
+    
+    @Test func staleDisappearanceDoesNotDismissTheNextToast() throws {
+        let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
+        let firstDismissals = CallCounter()
+        let secondDismissals = CallCounter()
+        
+        manager.show("First", onDismiss: firstDismissals.increment)
+        let firstID = try #require(manager.presentationID)
+        manager.show("Second", onDismiss: secondDismissals.increment)
+        let secondWindow = try #require(manager.window)
+        
+        // The first window's content reports its disappearance after it was replaced.
+        manager.toastDidDisappear(presentationID: firstID)
+        
+        #expect(manager.window === secondWindow)
+        #expect(secondWindow.isHidden == false)
+        #expect(firstDismissals.count == 0)
+        #expect(secondDismissals.count == 0)
+    }
+    
+    @Test func currentDisappearanceDismissesTheToast() throws {
+        let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
+        let dismissals = CallCounter()
+        
+        manager.show("Hello", onDismiss: dismissals.increment)
+        let window = try #require(manager.window)
+        manager.toastDidDisappear(presentationID: try #require(manager.presentationID))
+        
+        #expect(dismissals.count == 1)
+        #expect(window.isHidden)
+        #expect(manager.window == nil)
+    }
 }
