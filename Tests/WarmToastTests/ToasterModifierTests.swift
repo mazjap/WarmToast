@@ -17,7 +17,7 @@ import Testing
         
         box.toast("A")
         box.toast("B")
-        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+        #expect(await waitUntil { harness.visibleToastWindow != nil })
         
         box.eject()
         #expect(await waitUntil { box.toasting == "B" })
@@ -92,7 +92,6 @@ import Testing
             StateHost(remote: bread) { Color.clear.preheatToaster(withBread: $0, options: .toasterStrudel(type: .info, duration: .seconds(0.2))) { Text($0) } }
         }
         defer { harness.tearDown() }
-        try await Task.sleep(for: .milliseconds(100))
         
         bread.value = "Saved"
         #expect(await waitUntil { harness.visibleToastWindow != nil })
@@ -108,7 +107,6 @@ import Testing
             StateHost(remote: bread) { Color.clear.preheatToaster(withBread: $0, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) } }
         }
         defer { harness.tearDown() }
-        try await Task.sleep(for: .milliseconds(100))
         
         bread.value = "A"
         #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
@@ -121,13 +119,23 @@ import Testing
         #expect(harness.source.madeWindows.count == 1)
     }
     
+    @Test func breadSetBeforeTheViewAppearsIsToasted() async throws {
+        // Regression: a toast window created during the presenting view's first appearance never rendered.
+        let bread = BindingBox<String?>("Welcome back")
+        let harness = ToasterHarness {
+            StateHost(remote: bread) { Color.clear.preheatToaster(withBread: $0, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) } }
+        }
+        defer { harness.tearDown() }
+        
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+    }
+    
     @Test func settingTheBindingToNilDismissesTheToast() async throws {
         let bread = BindingBox<String?>(nil)
         let harness = ToasterHarness {
             StateHost(remote: bread) { Color.clear.preheatToaster(withBread: $0, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) } }
         }
         defer { harness.tearDown() }
-        try await Task.sleep(for: .milliseconds(100))
         
         bread.value = "A"
         #expect(await waitUntil { harness.visibleToastWindow != nil })
@@ -144,14 +152,12 @@ import Testing
             let id = UUID()
             let text: String
         }
-        let loaf = BindingBox([Slice]())
+        let loaf = BindingBox([Slice(text: "A"), Slice(text: "B")])
         let harness = ToasterHarness {
             StateHost(remote: loaf) { Color.clear.preheatToaster(withLoaf: $0, options: .toasterStrudel(type: .info, duration: .seconds(0.2)), durationBetweenToasts: 0) { Text($0.text) } }
         }
         defer { harness.tearDown() }
-        try await Task.sleep(for: .milliseconds(100))
         
-        loaf.value = [Slice(text: "A"), Slice(text: "B")]
         #expect(await waitUntil { harness.source.madeWindows.count == 1 })
         #expect(loaf.value.map(\.text) == ["B"])
         
@@ -182,17 +188,24 @@ final class BindingBox<Value> {
 private struct StateHost<Value: Equatable, Content: View>: View {
     let remote: BindingBox<Value>
     let content: (Binding<Value>) -> Content
+    private let initialValue: Value
     @State private var value: Value
     
     init(remote: BindingBox<Value>, @ViewBuilder content: @escaping (Binding<Value>) -> Content) {
         self.remote = remote
         self.content = content
+        self.initialValue = remote.value
         self._value = State(initialValue: remote.value)
     }
     
     var body: some View {
         content($value)
-            .onAppear { value = remote.value }
+            .onAppear {
+                // Only a change made after init. The content may already have changed the value itself.
+                if remote.value != initialValue {
+                    value = remote.value
+                }
+            }
             .onChange(of: remote.value) { _, newValue in value = newValue }
             .onChange(of: value) { _, newValue in remote.value = newValue }
     }

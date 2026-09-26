@@ -83,6 +83,7 @@ final class ToastWindowManager {
         let signal = ToastDismissSignal()
         toastWindow.rootViewController = pendingToast.makeRootViewController(pendingToast.id, signal)
         toastWindow.isHidden = false
+        toastWindow.layoutIfNeeded()
 
         self.pendingToast = nil
         self.window = toastWindow
