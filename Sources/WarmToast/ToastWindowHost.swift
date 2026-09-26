@@ -1,7 +1,8 @@
 import SwiftUI
 
-final class ToastDismissSignal: ObservableObject {
-    @Published var shouldDismiss = false
+@Observable
+final class ToastDismissSignal {
+    var shouldDismiss = false
 }
 
 struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
@@ -9,7 +10,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     @State private var offset: CGFloat = .zero
     @GestureState private var isTouching = false
     @State private var countdown: DismissCountdown
-    @ObservedObject var dismissSignal: ToastDismissSignal
+    let dismissSignal: ToastDismissSignal
     
     let bread: Bread
     let options: ToasterSettings<S>
@@ -88,10 +89,10 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
         .onAppear {
             withAnimation(animation) { isVisible = true }
         }
-        .onChange(of: dismissSignal.shouldDismiss, do: { should in
-            if should { dismiss() }
-        })
-        .onChange(of: isTouching, do: { isTouching in
+        .onChange(of: dismissSignal.shouldDismiss) { _, shouldDismiss in
+            if shouldDismiss { dismiss() }
+        }
+        .onChange(of: isTouching) { _, isTouching in
             // Gesture state also resets when the system cancels the touch, which skips onEnded.
             if isTouching {
                 countdown.pause()
@@ -99,7 +100,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                 countdown.resume()
                 withAnimation { offset = .zero }
             }
-        })
+        }
     }
     
     private func dismiss() {

@@ -24,7 +24,7 @@ final class LoafScheduler {
         isPausingBetweenToasts = true
         pauseTask?.cancel()
         pauseTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(max(0, pause) * 1_000_000_000))
+            try? await Task.sleep(for: .seconds(max(0, pause)))
             guard !Task.isCancelled, let self else { return }
 
             self.isPausingBetweenToasts = false

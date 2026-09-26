@@ -55,7 +55,7 @@ import Testing
         #expect(loaf.toasted == ["A"])
         
         #expect(await waitUntil { loaf.toasted.count == 2 })
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        try? await Task.sleep(for: .milliseconds(200))
         
         #expect(loaf.toasted == ["A", "B"])
         #expect(loaf.queue == ["C"])

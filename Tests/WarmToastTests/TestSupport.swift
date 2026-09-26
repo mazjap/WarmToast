@@ -52,7 +52,7 @@ func waitUntil(timeout: TimeInterval = 2, _ condition: () -> Bool) async -> Bool
     let deadline = Date().addingTimeInterval(timeout)
     while !condition() {
         if Date() > deadline { return false }
-        try? await Task.sleep(nanoseconds: 10_000_000)
+        try? await Task.sleep(for: .milliseconds(10))
     }
     return true
 }

@@ -35,9 +35,9 @@ struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: Vi
             .onAppear {
                 scheduler.advance(startNext: makeMoreToast)
             }
-            .onChange(of: loaf.map(\.id), do: { _ in
+            .onChange(of: loaf.map(\.id)) {
                 scheduler.advance(startNext: makeMoreToast)
-            })
+            }
     }
     
     private func makeMoreToast() -> Bool {
@@ -88,7 +88,7 @@ struct AutomatedLoafToaster_Previews: PreviewProvider {
                 Spacer()
             }
             .background(Color.orange)
-            .edgesIgnoringSafeArea(.all)
+            .ignoresSafeArea()
             .preheatToaster(
                 withLoaf: $messages,
                 options: .toasterStrudel(type: .info, duration: .seconds(1))
@@ -98,7 +98,7 @@ struct AutomatedLoafToaster_Previews: PreviewProvider {
             }
             .sheet(isPresented: .constant(true)) {
                 ZStack {
-                    Color.black.edgesIgnoringSafeArea(.all)
+                    Color.black.ignoresSafeArea()
                     
                     VStack {
                         Spacer()

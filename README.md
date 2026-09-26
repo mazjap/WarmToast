@@ -3,7 +3,7 @@
 A lightweight toast notification system for SwiftUI applications.
 
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
-[![Platforms](https://img.shields.io/badge/Platforms-iOS%2013+-lightgrey.svg)](https://developer.apple.com/swift/)
+[![Platforms](https://img.shields.io/badge/Platforms-iOS%2017+-lightgrey.svg)](https://developer.apple.com/swift/)
 [![Swift Package Manager](https://img.shields.io/badge/Swift_Package_Manager-compatible-brightgreen.svg)](https://swift.org/package-manager/)
 
 WarmToast makes it incredibly easy to add beautiful, customizable toast notifications to your SwiftUI project. With support for multiple presentation styles, accent colors, and automatic toast queuing, you can enhance your app's user experience with minimal code.
@@ -23,7 +23,7 @@ WarmToast makes it incredibly easy to add beautiful, customizable toast notifica
 
 ## Requirements
 
-- iOS 13.0+
+- iOS 17.0+
 - Swift 6.0+
 - Xcode 16.0+
 

@@ -27,13 +27,13 @@ struct Toaster<Bread, S: ShapeStyle, Toast: View>: ViewModifier {
             .onDisappear {
                 windowManager.cleanup()
             }
-            .onChange(of: bread != nil, do: { isNonNil in
+            .onChange(of: bread != nil) { _, isNonNil in
                 if isNonNil, let currentBread = bread {
                     show(currentBread)
                 } else {
                     windowManager.hide()
                 }
-            })
+            }
     }
 
     private func show(_ bread: Bread) {
@@ -69,7 +69,7 @@ struct Toaster_Previews: PreviewProvider {
                 Spacer()
             }
             .background(Color.orange)
-            .edgesIgnoringSafeArea(.all)
+            .ignoresSafeArea()
             .preheatToaster(
                 withBread: $message,
                 options: .toasterStrudel(type: .info, duration: .seconds(5))

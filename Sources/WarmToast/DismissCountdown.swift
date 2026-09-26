@@ -48,7 +48,7 @@ final class DismissCountdown {
         resumedAt = Date()
         let delay = max(0, remaining)
         task = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            try? await Task.sleep(for: .seconds(delay))
             guard !Task.isCancelled, let self else { return }
 
             let onFinish = self.onFinish
