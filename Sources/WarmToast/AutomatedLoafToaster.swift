@@ -38,11 +38,11 @@ struct AutomatedLoafToaster<Bread: Identifiable, S: ShapeStyle, Toast: View>: Vi
                 isAppearing = false
                 decideWhetherToMakeMoreToastNowOrLater()
             }
-            .onChange(of: loaf.map(\.id)) { _ in
+            .onChange(of: loaf.map(\.id), do: { _ in
                 if currentlyToasting == nil && !loaf.isEmpty && !isAppearing {
                     decideWhetherToMakeMoreToastNowOrLater()
                 }
-            }
+            })
     }
     
     private func decideWhetherToMakeMoreToastNowOrLater() {
