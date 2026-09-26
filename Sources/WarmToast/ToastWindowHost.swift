@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 final class ToastDismissSignal: ObservableObject {
     @Published var shouldDismiss = false
@@ -8,6 +7,7 @@ final class ToastDismissSignal: ObservableObject {
 struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     @State private var isVisible = false
     @State private var offset: CGFloat = .zero
+    @State private var countdown: DismissCountdown
     @ObservedObject var dismissSignal: ToastDismissSignal
     
     let bread: Bread
@@ -17,7 +17,6 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     let onDismiss: () -> Void
     
     private let animation: Animation
-    private let timer: AnyPublisher<Timer.TimerPublisher.Output, Timer.TimerPublisher.Failure>
     
     init(
         dismissSignal: ToastDismissSignal,
@@ -34,13 +33,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
         self.onToastFrameChange = onToastFrameChange
         self.onDismiss = onDismiss
         self.animation = options.animation ?? .default
-        self.timer = Timer.TimerPublisher(
-            interval: options.timeTilToasted.timeInterval,
-            tolerance: 0.1,
-            runLoop: .main,
-            mode: .common,
-            options: nil
-        ).autoconnect().eraseToAnyPublisher()
+        self._countdown = State(initialValue: DismissCountdown(duration: options.timeTilToasted))
     }
     
     var body: some View {
@@ -62,27 +55,29 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                         Color.clear.preference(key: ToastFramePreferenceKey.self, value: proxy.frame(in: .global))
                     })
                     .offset(y: offset)
-                    .gesture(
-                        DragGesture()
+                    .simultaneousGesture(
+                        // A minimum distance of zero pauses the countdown as soon as the toast is touched.
+                        DragGesture(minimumDistance: 0)
                             .onChanged { value in
+                                countdown.pause()
                                 guard options.isSwipable else { return }
                                 offset = min(0, value.translation.height)
                             }
                             .onEnded { value in
-                                guard options.isSwipable else { return }
-                                if offset < -30 {
+                                if options.isSwipable && offset < -30 {
                                     dismiss()
                                 } else {
+                                    countdown.resume()
                                     withAnimation { offset = .zero }
                                 }
                             }
                     )
                     .transition(.toastInsertion(options.presentationStyle, animation: animation))
-                    .onReceive(timer) { _ in
-                        guard options.timeTilToasted != .indefinitely else { return }
-                        dismiss()
+                    .onAppear {
+                        countdown.start(onFinish: dismiss)
                     }
                     .onDisappear {
+                        countdown.cancel()
                         onDismiss()
                     }
             }
@@ -101,6 +96,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     }
     
     private func dismiss() {
+        countdown.cancel()
         withAnimation(animation) { isVisible = false }
     }
 }

@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 @testable import WarmToast
 
@@ -88,5 +89,34 @@ import Testing
         #expect(dismissals.count == 1)
         #expect(window.isHidden)
         #expect(manager.window == nil)
+    }
+    
+    @Test func timedToastDismissesItselfAndReportsIt() async {
+        let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
+        let dismissals = CallCounter()
+        
+        manager.show(
+            bread: "Short",
+            options: .toasterStrudel(type: .info, duration: .seconds(0.1)),
+            toast: { Text($0) },
+            onDismiss: dismissals.increment
+        )
+        
+        #expect(await waitUntil { dismissals.count == 1 })
+        #expect(manager.window == nil)
+    }
+    
+    @Test func hidingAShownToastDismissesItAndReportsIt() async throws {
+        let manager = ToastWindowManager(windowSource: FakeToastWindowSource())
+        let dismissals = CallCounter()
+        
+        manager.show("Hello", onDismiss: dismissals.increment)
+        let window = try #require(manager.window)
+        try #require(await waitUntil { window.toastFrame != nil })
+        
+        manager.hide()
+        
+        #expect(await waitUntil { dismissals.count == 1 })
+        #expect(window.isHidden)
     }
 }
