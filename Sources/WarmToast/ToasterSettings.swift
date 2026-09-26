@@ -3,26 +3,35 @@ import SwiftUI
 public struct ToasterSettings: Sendable {
     /// The duration that the toast is shown on screen in seconds.
     /// - Note: Use `PresentedDuration.indefinitely` to keep the toast on screen forever. The toast can be manually dismissed by the user if `isSwipable` is true.
-    public let timeTilToasted: PresentedDuration
+    public var timeTilToasted: PresentedDuration
     
     /// Color applied to the leading edge of the toast.
     /// - Note: No leading edge color will be shown if nil is provided.
-    public let accentColor: Color?
+    public var accentColor: Color?
     
     /// The background of the toast.
     /// - Note: `ToastBackground.default` will be used if no parameter is provided.
-    public let background: ToastBackground
+    public var background: ToastBackground
     
     /// The method with which to insert the toast into the world.
     /// - Note: `PresentationStyle.slide` will be used if none is provided.
-    public let presentationStyle: PresentationStyle
+    public var presentationStyle: PresentationStyle
     
     /// The animation to use when presenting the toast.
-    public let animation: Animation?
+    public var animation: Animation?
     
     /// Whether swipe-to-dismiss is enabled on the toast.
     /// - Note: Defaults to true.
-    public let isSwipable: Bool
+    public var isSwipable: Bool
+    
+    /// Where the toast pops out: the top or the bottom of the screen.
+    /// - Note: Defaults to `.top`.
+    public var slot: ToasterSlot
+    
+    /// Extra space between the toast and the edges of the safe area, for example to keep a toast clear
+    /// of a floating control.
+    /// - Note: Defaults to no extra space.
+    public var insets: EdgeInsets
     
     /// ToasterSettings initializer. Also see the static methods such as: `toasterStrudel` for built in options.
     /// - Parameters:
@@ -32,13 +41,17 @@ public struct ToasterSettings: Sendable {
     ///   - presentationStyle: The method with which to insert the toast into the world. `PresentationStyle.slide` will be used if none is provided.
     ///   - animation: The animation to use when presenting the toast.
     ///   - isSwipable: Whether swipe-to-dismiss is enabled on the toast. Defaults to true.
+    ///   - slot: Where the toast pops out: the top or the bottom of the screen. Defaults to `.top`.
+    ///   - insets: Extra space between the toast and the edges of the safe area. Defaults to none.
     public init(
         timeTilToasted: PresentedDuration,
         accentColor: Color? = nil,
         background: ToastBackground = .default,
         presentationStyle: PresentationStyle = .slide,
         animation: Animation? = nil,
-        isSwipable: Bool = true
+        isSwipable: Bool = true,
+        slot: ToasterSlot = .top,
+        insets: EdgeInsets = EdgeInsets()
     ) {
         self.timeTilToasted = timeTilToasted
         self.accentColor = accentColor
@@ -46,6 +59,8 @@ public struct ToasterSettings: Sendable {
         self.presentationStyle = presentationStyle
         self.animation = animation
         self.isSwipable = isSwipable
+        self.slot = slot
+        self.insets = insets
     }
 }
 
@@ -60,13 +75,17 @@ extension ToasterSettings {
     ///   - presentationStyle: The method with which to insert the toast into the world. `PresentationStyle.slide` will be used if none is provided.
     ///   - animation: The animation to use when presenting the toast.
     ///   - isSwipable: Whether swipe-to-dismiss is enabled on the toast. Defaults to true.
+    ///   - slot: Where the toast pops out: the top or the bottom of the screen. Defaults to `.top`.
+    ///   - insets: Extra space between the toast and the edges of the safe area. Defaults to none.
     public init(
         timeTilToasted: PresentedDuration,
         accentColor: Color? = nil,
         background: some ShapeStyle,
         presentationStyle: PresentationStyle = .slide,
         animation: Animation? = nil,
-        isSwipable: Bool = true
+        isSwipable: Bool = true,
+        slot: ToasterSlot = .top,
+        insets: EdgeInsets = EdgeInsets()
     ) {
         self.init(
             timeTilToasted: timeTilToasted,
@@ -74,7 +93,9 @@ extension ToasterSettings {
             background: .style(background),
             presentationStyle: presentationStyle,
             animation: animation,
-            isSwipable: isSwipable
+            isSwipable: isSwipable,
+            slot: slot,
+            insets: insets
         )
     }
 }
@@ -125,11 +146,12 @@ extension ToasterSettings {
     }
     
     /// Ready-made settings with the type's accent color and a bouncy animation.
-    public static func toasterStrudel(type: StrudelType?, duration: PresentedDuration = .seconds(5)) -> ToasterSettings {
+    public static func toasterStrudel(type: StrudelType?, duration: PresentedDuration = .seconds(5), slot: ToasterSlot = .top) -> ToasterSettings {
         ToasterSettings(
             timeTilToasted: duration,
             accentColor: type?.tint,
-            animation: .bouncy
+            animation: .bouncy,
+            slot: slot
         )
     }
     

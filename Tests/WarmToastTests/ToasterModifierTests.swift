@@ -143,6 +143,43 @@ import Testing
         #expect(await waitUntil { harness.visibleToastWindow == nil })
     }
     
+    @Test func bottomSlotToastsSitAtTheBottom() async throws {
+        let box = BreadBox<String>()
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .indefinitely, slot: .bottom)) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("Down here")
+        
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+        try await Task.sleep(for: .milliseconds(500))
+        let window = try #require(harness.visibleToastWindow)
+        let toastFrame = try #require(window.toastFrame)
+        #expect(toastFrame.minY > window.bounds.midY)
+        #expect(toastFrame.maxY <= window.bounds.maxY)
+    }
+    
+    @Test func insetsKeepTheToastClearOfTheEdge() async throws {
+        let box = BreadBox<String>()
+        var options = ToasterSettings.toasterStrudel(type: .info, duration: .indefinitely)
+        options.insets = EdgeInsets(top: 100, leading: 0, bottom: 0, trailing: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: options) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("Below the status capsule")
+        
+        // The toast slides in from above, so wait for it to settle. Insets are measured from the safe area.
+        #expect(await waitUntil { (harness.visibleToastWindow?.toastFrame?.minY ?? 0) >= 100 })
+        try await Task.sleep(for: .milliseconds(800))
+        let window = try #require(harness.visibleToastWindow)
+        let toastFrame = try #require(window.toastFrame)
+        let expectedTop = window.safeAreaInsets.top + 100
+        #expect(abs(toastFrame.minY - expectedTop) < 2, "Toast frame: \(toastFrame), expected top: \(expectedTop)")
+    }
+    
     // MARK: - Bread binding
     
     @Test func bindingIsClearedWhenTheToastLeaves() async throws {

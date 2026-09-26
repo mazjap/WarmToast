@@ -22,6 +22,7 @@ struct ToastWindowHost<Bread, Toast: View>: View {
 
     private let presentationStyle: PresentationStyle
     private let animation: Animation
+    private let slot: ToasterSlot
 
     init(
         box: BreadBox<Bread>,
@@ -43,10 +44,15 @@ struct ToastWindowHost<Bread, Toast: View>: View {
         let reduceMotion = UIAccessibility.isReduceMotionEnabled
         self.presentationStyle = settings.presentationStyle(reduceMotion: reduceMotion)
         self.animation = settings.presentationAnimation(reduceMotion: reduceMotion)
+        self.slot = settings.slot
     }
 
     var body: some View {
         VStack(spacing: 0) {
+            if slot == .bottom {
+                Spacer()
+            }
+            
             if isVisible, let order = box.order(withID: orderID) {
                 let settings = order.options ?? options(order.bread)
 
@@ -65,18 +71,20 @@ struct ToastWindowHost<Bread, Toast: View>: View {
                             }
                             .onChanged { value in
                                 guard settings.isSwipable else { return }
-                                offset = min(0, value.translation.height)
+                                offset = slot.offset(forDrag: value.translation.height)
                             }
                             .onEnded { value in
-                                // A quick flick can end before any drag update moves the toast, so
-                                // the predicted end of the swipe counts too.
-                                let swipe = min(value.translation.height, value.predictedEndTranslation.height)
-                                if settings.isSwipable && swipe < -30 {
+                                let isDismissal = slot.isDismissal(
+                                    translation: value.translation.height,
+                                    predictedEndTranslation: value.predictedEndTranslation.height
+                                )
+                                if settings.isSwipable && isDismissal {
                                     dismiss()
                                 }
                             }
                     )
-                    .transition(.toastInsertion(presentationStyle, animation: animation))
+                    .padding(settings.insets)
+                    .transition(.toastInsertion(presentationStyle, from: slot.edge, animation: animation))
                     .onAppear {
                         countdown.start(duration: settings.timeTilToasted, onFinish: dismiss)
                     }
@@ -92,7 +100,10 @@ struct ToastWindowHost<Bread, Toast: View>: View {
                         onDisappear()
                     }
             }
-            Spacer()
+            
+            if slot == .top {
+                Spacer()
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
