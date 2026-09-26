@@ -66,6 +66,76 @@ import Testing
         #expect(await waitUntil { box.toasting == "B" })
     }
     
+    @Test func duplicateAddedWhileTheToastLeavesIsToastedNext() async throws {
+        // Regression: a toast leaving on its own still counted as current during its exit animation,
+        // so the same bread put in then was thrown away as a duplicate.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .seconds(0.3))) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("Finish your marker first")
+        // Time the second bread from when the toast appears, so it lands during the 0.3-second toast's exit.
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+        try await Task.sleep(for: .milliseconds(380))
+        box.toast("Finish your marker first")
+        
+        #expect(await waitUntil { harness.source.madeWindows.count == 2 })
+    }
+    
+    @Test func breadReplacedWhileTheToastLeavesIsNotLost() async throws {
+        // Regression: .replace put the new bread into the leaving toast, and it left with it.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let harness = ToasterHarness {
+            Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .seconds(0.3))) { Text($0) }
+        }
+        defer { harness.tearDown() }
+        
+        box.toast("Downloading 90%", recipe: "download")
+        // Time the second bread from when the toast appears, so it lands during the 0.3-second toast's exit.
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+        try await Task.sleep(for: .milliseconds(380))
+        box.toast("Download finished", recipe: "download", ifDuplicate: .replace)
+        
+        #expect(await waitUntil { box.toasting == "Download finished" })
+        #expect(await waitUntil { harness.source.madeWindows.count == 2 })
+    }
+    
+    @Test func aBoxOnTwoToastersShowsEachToastOnce() async throws {
+        // Regression: every toaster attached to the box presented its current toast in a window of its own.
+        let box = BreadBox<String>(pauseBetweenToasts: 0)
+        let showsFirstToaster = BindingBox(true)
+        let showsSecondToaster = BindingBox(false)
+        let harness = ToasterHarness {
+            VStack {
+                ShowWhile(showsFirstToaster) {
+                    Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) }
+                }
+                ShowWhile(showsSecondToaster) {
+                    Color.clear.preheatToaster(withBreadBox: box, options: .toasterStrudel(type: .info, duration: .indefinitely)) { Text($0) }
+                }
+            }
+        }
+        defer { harness.tearDown() }
+        // Attach the toasters one after the other, so the first one is the one presenting.
+        try await Task.sleep(for: .milliseconds(100))
+        showsSecondToaster.value = true
+        try await Task.sleep(for: .milliseconds(100))
+        
+        box.toast("A")
+        box.toast("B")
+        #expect(await waitUntil { harness.visibleToastWindow != nil })
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(harness.source.madeWindows.count == 1)
+        
+        // The first toaster going away ends its toast, and the second toaster takes over.
+        showsFirstToaster.value = false
+        
+        #expect(await waitUntil { box.toasting == "B" })
+        #expect(await waitUntil { harness.source.madeWindows.count == 2 && harness.visibleToastWindow != nil })
+    }
+    
     @Test func ejectingBeforeTheToastRendersStillEndsIt() async throws {
         // Regression: a dismissal requested before the toast window's first render was never seen,
         // so the toast stayed up and the box stalled.
@@ -215,6 +285,24 @@ import Testing
         #expect(harness.source.madeWindows.count == 1)
     }
     
+    @Test func changingASliceBindingShowsTheNewSlice() async throws {
+        // Regression: Slice isn't Equatable, so the change went unnoticed and the new slice was lost.
+        let slice = BindingBox<Slice?>(nil)
+        let harness = ToasterHarness {
+            SliceStateHost(remote: slice) { Color.clear.preheatToaster(withBread: $0) { _ in .toasterStrudel(type: .info, duration: .indefinitely) } }
+        }
+        defer { harness.tearDown() }
+        
+        slice.value = Slice("First")
+        #expect(await waitUntil { harness.visibleToastWindow?.toastFrame != nil })
+        let firstFrame = try #require(harness.visibleToastWindow?.toastFrame)
+        
+        slice.value = Slice("A much longer second slice")
+        
+        #expect(await waitUntil { (harness.visibleToastWindow?.toastFrame?.width ?? 0) > firstFrame.width })
+        #expect(slice.value?.title == "A much longer second slice")
+    }
+    
     @Test func breadSetBeforeTheViewAppearsIsToasted() async throws {
         // Regression: a toast window created during the presenting view's first appearance never rendered.
         let bread = BindingBox<String?>("Welcome back")
@@ -318,6 +406,33 @@ private struct SelfEjectingToast: View {
                 try? await Task.sleep(for: .milliseconds(100))
                 ejectToast()
             }
+    }
+}
+
+/// Owns a slice in `@State` and keeps it in sync with `remote`, by id because slices aren't `Equatable`.
+private struct SliceStateHost<Content: View>: View {
+    let remote: BindingBox<Slice?>
+    let content: (Binding<Slice?>) -> Content
+    private let initialID: Slice.ID?
+    @State private var slice: Slice?
+    
+    init(remote: BindingBox<Slice?>, @ViewBuilder content: @escaping (Binding<Slice?>) -> Content) {
+        self.remote = remote
+        self.content = content
+        self.initialID = remote.value?.id
+        self._slice = State(initialValue: remote.value)
+    }
+    
+    var body: some View {
+        content($slice)
+            .onAppear {
+                // Only a change made after init. The content may already have changed the value itself.
+                if remote.value?.id != initialID {
+                    slice = remote.value
+                }
+            }
+            .onChange(of: remote.value?.id) { slice = remote.value }
+            .onChange(of: slice?.id) { remote.value = slice }
     }
 }
 

@@ -8,6 +8,7 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
     
     @State private var windowManager = ToastWindowManager()
     @State private var presentedOrderID: UUID?
+    @State private var toasterID = UUID()
     
     func body(content: Content) -> some View {
         content
@@ -15,9 +16,11 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
                 windowManager.hostSceneDidChange(scene)
             })
             .onAppear {
+                box.attachToaster(id: toasterID)
                 presentCurrentOrder()
             }
             .onDisappear {
+                box.detachToaster(id: toasterID)
                 windowManager.cleanup()
                 // Without a toaster, the toast can't leave on its own, and the box would stall.
                 if let presentedOrderID {
@@ -28,14 +31,19 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
             .onChange(of: box.current?.id) {
                 presentCurrentOrder()
             }
-            .onChange(of: box.isEjecting) { _, isEjecting in
-                if isEjecting {
+            .onChange(of: box.activeToasterID) {
+                presentCurrentOrder()
+            }
+            .onChange(of: box.isLeaving) { _, isLeaving in
+                if isLeaving {
                     windowManager.hide()
                 }
             }
     }
     
     private func presentCurrentOrder() {
+        // Only one toaster presents a box's toasts, so each toast appears once.
+        guard box.activeToasterID == toasterID else { return }
         guard let order = box.current, order.id != presentedOrderID else { return }
         
         presentedOrderID = order.id
@@ -58,7 +66,7 @@ struct BreadBoxToaster<Bread, Toast: View>: ViewModifier {
             }
         )
         
-        if box.isEjecting {
+        if box.isLeaving {
             windowManager.hide()
         }
     }
@@ -142,8 +150,8 @@ struct LoafToaster<Bread: Identifiable, Toast: View>: ViewModifier {
 
 /// Compares bread for `onChange`, even when the bread type isn't `Equatable`.
 ///
-/// `Equatable` bread is compared by value and class instances by identity. Other bread can only be told
-/// apart from nil, so replacing it with different bread isn't noticed.
+/// `Equatable` bread is compared by value, `Identifiable` bread by id, and class instances by identity.
+/// Other bread can only be told apart from nil, so replacing it with different bread isn't noticed.
 struct BreadIdentity<Bread>: Equatable {
     let bread: Bread?
     
@@ -166,6 +174,9 @@ struct BreadIdentity<Bread>: Equatable {
         if let lhs = lhs as? any Equatable {
             return lhs.isEqual(to: rhs)
         }
+        if let lhs = lhs as? any Identifiable {
+            return lhs.hasSameID(as: rhs)
+        }
         if type(of: lhs) is AnyClass {
             return (lhs as AnyObject) === (rhs as AnyObject)
         }
@@ -176,5 +187,12 @@ struct BreadIdentity<Bread>: Equatable {
 private extension Equatable {
     func isEqual(to other: Any) -> Bool {
         (other as? Self) == self
+    }
+}
+
+private extension Identifiable {
+    func hasSameID(as other: Any) -> Bool {
+        guard let other = other as? Self else { return false }
+        return id == other.id
     }
 }

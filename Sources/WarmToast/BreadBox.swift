@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// A box of bread waiting to be toasted. Put bread in with `toast(_:)`, and a toaster attached with
 /// `preheatToaster(withBreadBox:)` toasts it one slice at a time.
@@ -14,13 +15,17 @@ public final class BreadBox<Bread> {
     /// The toast being shown, or waiting for a window to be shown in.
     private(set) var current: ToastOrder<Bread>?
 
-    /// Whether the current toast has been asked to leave.
-    private(set) var isEjecting = false
+    /// Whether the current toast is leaving, because it was ejected or is leaving on its own. A leaving
+    /// toast isn't a duplicate of new bread.
+    private(set) var isLeaving = false
 
     /// Whether the box is waiting out the pause after a toast left.
     private(set) var isPausing = false
 
     private var line: [ToastOrder<Bread>] = []
+    
+    /// The toasters attached to the box, in the order they attached.
+    private var toasterIDs: [UUID] = []
 
     @ObservationIgnored private var pauseTask: Task<Void, Never>?
 
@@ -67,7 +72,7 @@ public final class BreadBox<Bread> {
 
         if let recipe = order.recipe, ifDuplicate != .toastAgain {
             // A toast that is already leaving doesn't count as a duplicate.
-            if let current, !isEjecting, current.recipe == recipe {
+            if let current, !isLeaving, current.recipe == recipe {
                 if ifDuplicate != .ignore {
                     self.current = current.replaced(by: order)
                 }
@@ -97,7 +102,7 @@ public final class BreadBox<Bread> {
     /// Dismisses the toast on screen. The next bread in the box is toasted after it leaves.
     public func eject() {
         guard current != nil else { return }
-        isEjecting = true
+        isLeaving = true
     }
 
     /// Throws out all the waiting bread and dismisses the toast on screen.
@@ -106,12 +111,19 @@ public final class BreadBox<Bread> {
         eject()
     }
 
+    /// Called when the current toast starts leaving on its own: its countdown ran out, or it was swiped,
+    /// topped or dismissed from its content.
+    func toastWillLeave(orderID: UUID) {
+        guard current?.id == orderID else { return }
+        isLeaving = true
+    }
+
     /// Called when the current toast has left the screen.
     func toastDidLeave(orderID: UUID) {
         guard current?.id == orderID else { return }
 
         current = nil
-        isEjecting = false
+        isLeaving = false
         isPausing = true
         pauseTask?.cancel()
 
@@ -127,6 +139,28 @@ public final class BreadBox<Bread> {
         }
     }
 
+    /// The toaster that presents the box's toasts: the first attached toaster that's still attached.
+    var activeToasterID: UUID? {
+        toasterIDs.first
+    }
+    
+    /// Called when a toaster for this box appears.
+    func attachToaster(id: UUID) {
+        guard !toasterIDs.contains(id) else { return }
+        toasterIDs.append(id)
+        
+        if toasterIDs.count > 1 {
+            Logger(subsystem: "WarmToast", category: "BreadBox").warning(
+                "A bread box is attached to \(self.toasterIDs.count) toasters at once. Only the first one presents its toasts. Attach each bread box to one toaster."
+            )
+        }
+    }
+    
+    /// Called when a toaster for this box disappears. The next attached toaster, if any, takes over.
+    func detachToaster(id: UUID) {
+        toasterIDs.removeAll { $0 == id }
+    }
+    
     /// The current order, if it's the one with the given ID.
     func order(withID id: UUID) -> ToastOrder<Bread>? {
         current?.id == id ? current : nil

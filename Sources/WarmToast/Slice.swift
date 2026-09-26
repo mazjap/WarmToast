@@ -58,7 +58,8 @@ extension ToasterSettings {
     }
 }
 
-/// Draws a slice as toast: its type's icon, its title, and its message.
+/// Draws a slice as toast: its type's icon, its title, and its message. The accent bar carries the type's
+/// bright tint, while the icon and topping use colors that keep enough contrast to read.
 public struct ToastedSlice: View {
     private let slice: Slice
     @Environment(\.ejectToast) private var ejectToast
@@ -72,9 +73,10 @@ public struct ToastedSlice: View {
             HStack(spacing: 10) {
                 if let type = slice.type {
                     Image(systemName: type.symbolName)
-                        .foregroundStyle(type.tint)
+                        .foregroundStyle(type.iconTint)
                         .imageScale(.large)
-                        .accessibilityHidden(true)
+                        // VoiceOver hears the type that the icon and color show.
+                        .accessibilityLabel(type.accessibilityName)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -84,7 +86,8 @@ public struct ToastedSlice: View {
                     if let message = slice.message {
                         Text(message)
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            // The regular secondary gray falls just short of the contrast small text needs.
+                            .foregroundStyle(Color(uiColor: UIColor.secondaryLabel.increasedContrast))
                     }
                 }
             }
@@ -96,12 +99,14 @@ public struct ToastedSlice: View {
                     ejectToast()
                 } label: {
                     Text(topping.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.bold))
                         // A comfortable tap target, even though the text is small.
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(.rect)
                 }
-                .tint(slice.type?.tint)
+                // Tints are too light for small text, including the app's accent color, so the topping
+                // uses the text color.
+                .tint(.primary)
             }
         }
         .padding(.vertical, 8)

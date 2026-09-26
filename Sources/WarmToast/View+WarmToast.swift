@@ -6,7 +6,7 @@ extension View {
     /// Warm up the toaster to prepare for presentation.
     /// - Parameters:
     ///   - bread: Optional item as source of truth for presenting the toast. When non-nil, toast pops out of the toaster. When nil, the toast is removed from the view-hierarchy.
-    ///     If the bread changes while it's being toasted, the toast shows the new bread. Changes are noticed for `Equatable` bread and class instances.
+    ///     If the bread changes while it's being toasted, the toast shows the new bread. Changes are noticed for `Equatable` bread, `Identifiable` bread (such as `Slice`) and class instances.
     ///   - options: Toaster options.
     ///   - toast: A view closure that turns bread into toast.
     /// - Returns: Your view with a toaster attached, just out of sight.
@@ -21,7 +21,7 @@ extension View {
     /// Warm up the toaster, with options chosen for each piece of bread.
     /// - Parameters:
     ///   - bread: Optional item as source of truth for presenting the toast. When non-nil, toast pops out of the toaster. When nil, the toast is removed from the view-hierarchy.
-    ///     If the bread changes while it's being toasted, the toast shows the new bread. Changes are noticed for `Equatable` bread and class instances.
+    ///     If the bread changes while it's being toasted, the toast shows the new bread. Changes are noticed for `Equatable` bread, `Identifiable` bread (such as `Slice`) and class instances.
     ///   - options: Picks the toaster options for a piece of bread, such as `.toasterStrudel(type: .error)` for a failure.
     ///   - toast: A view closure that turns bread into toast.
     /// - Returns: Your view with a toaster attached, just out of sight.

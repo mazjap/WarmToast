@@ -152,12 +152,23 @@ final class WarmToastDemoUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Welcome back"].waitForExistence(timeout: 3))
     }
     
-    func testSliceToastPassesAnAccessibilityAudit() throws {
-        app.launch()
-        app.buttons["showToppingSlice"].tap()
-        XCTAssertTrue(app.staticTexts["Group merged"].waitForExistence(timeout: 2))
-        
-        // Contrast is left out: the demo's own plain buttons only nearly pass it.
-        try app.performAccessibilityAudit(for: [.elementDetection, .hitRegion, .sufficientElementDescription, .textClipped])
+    func testSliceToastsWithToppingsPassAnAccessibilityAudit() throws {
+        // Regression: warning and success slices drew their icon and topping in their bright tint,
+        // well short of the contrast text and icons need.
+        continueAfterFailure = true
+        for type in ["error", "warning", "info", "success"] {
+            app.launch()
+            app.buttons["showToppingSlice-\(type)"].tap()
+            XCTAssertTrue(app.staticTexts["Sync \(type)"].waitForExistence(timeout: 2), "The \(type) slice never appeared")
+            // Let the toast finish sliding in, so the audit sees it where it rests.
+            sleep(1)
+            
+            // Element detection is left out: its text recognition flags on-screen text at random from run
+            // to run. It found the slice icon's missing label, which is now fixed.
+            try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .sufficientElementDescription, .textClipped]) { issue in
+                XCTFail("\(type) slice: \(issue.compactDescription) on \(issue.element?.label ?? "an unknown element")")
+                return true
+            }
+        }
     }
 }

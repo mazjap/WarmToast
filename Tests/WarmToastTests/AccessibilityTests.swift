@@ -36,4 +36,32 @@ import Testing
         #expect(withTopping.duration(voiceOverRunning: true) == .indefinitely)
         #expect(without.duration(voiceOverRunning: true) == .seconds(10))
     }
+    
+    @Test func stringBreadAnnouncesItself() {
+        // Custom toasts were silent unless an announcement was set, even when the bread was the text itself.
+        let settings = ToasterSettings.toasterStrudel(type: .info)
+        
+        #expect(settings.announcement(for: "Marker saved") == "Marker saved")
+    }
+    
+    @Test func otherBreadIsSilentWithoutAnAnnouncement() {
+        struct Crumb {}
+        let settings = ToasterSettings.toasterStrudel(type: .info)
+        
+        #expect(settings.announcement(for: Crumb()) == nil)
+    }
+    
+    @Test func anAnnouncementWinsOverTheBread() {
+        var settings = ToasterSettings.toasterStrudel(type: .info)
+        settings.announcement = "Saved to Trips"
+        
+        #expect(settings.announcement(for: "Marker saved") == "Saved to Trips")
+    }
+    
+    @Test func anEmptyAnnouncementSilencesStringBread() {
+        var settings = ToasterSettings.toasterStrudel(type: .info)
+        settings.announcement = ""
+        
+        #expect(settings.announcement(for: "Marker saved") == nil)
+    }
 }
