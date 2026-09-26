@@ -81,6 +81,20 @@ extension ToasterSettings {
 }
 
 
+// MARK: - Motion
+
+extension ToasterSettings {
+    /// The presentation style to use, replaced by a fade when Reduce Motion is on.
+    func presentationStyle(reduceMotion: Bool) -> PresentationStyle {
+        reduceMotion ? .fade : presentationStyle
+    }
+    
+    /// The animation to use, replaced by a short ease without any bounce when Reduce Motion is on.
+    func presentationAnimation(reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeInOut(duration: 0.2) : (animation ?? .default)
+    }
+}
+
 // MARK: - Static properties
 
 extension ToasterSettings where S == Color {

@@ -16,6 +16,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
     let onToastFrameChange: (CGRect?) -> Void
     let onDismiss: () -> Void
     
+    private let presentationStyle: PresentationStyle
     private let animation: Animation
     
     init(
@@ -32,7 +33,9 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
         self.toast = toast
         self.onToastFrameChange = onToastFrameChange
         self.onDismiss = onDismiss
-        self.animation = options.animation ?? .default
+        let reduceMotion = UIAccessibility.isReduceMotionEnabled
+        self.presentationStyle = options.presentationStyle(reduceMotion: reduceMotion)
+        self.animation = options.presentationAnimation(reduceMotion: reduceMotion)
         self._countdown = State(initialValue: DismissCountdown(duration: options.timeTilToasted))
     }
     
@@ -72,7 +75,7 @@ struct ToastWindowHost<Bread, S: ShapeStyle, Toast: View>: View {
                                 }
                             }
                     )
-                    .transition(.toastInsertion(options.presentationStyle, animation: animation))
+                    .transition(.toastInsertion(presentationStyle, animation: animation))
                     .onAppear {
                         countdown.start(onFinish: dismiss)
                     }
