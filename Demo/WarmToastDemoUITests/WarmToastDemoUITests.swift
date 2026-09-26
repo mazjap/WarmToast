@@ -94,4 +94,70 @@ final class WarmToastDemoUITests: XCTestCase {
         let second = app.staticTexts["Queued in background 2"]
         XCTAssertTrue(second.waitForExistence(timeout: 6), "The queue stalled after the first toast")
     }
+    
+    // MARK: - Bread box
+    
+    func testToppingRunsItsActionAndDismissesTheToast() {
+        app.launch()
+        app.buttons["showToppingSlice"].tap()
+        let title = app.staticTexts["Group merged"]
+        XCTAssertTrue(title.waitForExistence(timeout: 2))
+        
+        app.buttons["Undo"].tap()
+        
+        XCTAssertEqual(app.staticTexts["toppingCount"].label, "Topping taps: 1")
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: title)
+        XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 1.5), .completed, "The topping didn't dismiss its toast")
+    }
+    
+    func testRepeatedTapsDoNotStackDuplicateToasts() {
+        app.launch()
+        let button = app.buttons["showOfflineSlice"]
+        
+        button.tap()
+        button.tap()
+        button.tap()
+        
+        XCTAssertTrue(app.staticTexts["You're offline"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.staticTexts["slicesWaiting"].label, "Slices waiting: 0")
+    }
+    
+    func testBottomToastsAreSwipedDown() {
+        app.launch()
+        app.buttons["showBottomSlice"].tap()
+        let title = app.staticTexts["Download finished"]
+        XCTAssertTrue(title.waitForExistence(timeout: 2))
+        XCTAssertGreaterThan(title.frame.minY, app.frame.midY, "The toast isn't in the bottom half of the screen")
+        
+        title.swipeDown()
+        
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: title)
+        XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 1.5), .completed, "Swiping down didn't dismiss the bottom toast")
+    }
+    
+    func testLoafToastsAppearWhenQueuedAtLaunch() {
+        // The toaster presents during the view's first appearance, which once left the toast unrendered.
+        app.launchArguments = ["-toast-at-launch"]
+        app.launch()
+        
+        // The loaf toast's text has an identifier, so match it by label.
+        let loafToast = app.staticTexts.matching(NSPredicate(format: "label == %@", "Toasted at launch")).firstMatch
+        XCTAssertTrue(loafToast.waitForExistence(timeout: 3))
+    }
+    
+    func testBreadBoxToastsAppearWhenQueuedAtLaunch() {
+        app.launchArguments = ["-slice-at-launch"]
+        app.launch()
+        
+        XCTAssertTrue(app.staticTexts["Welcome back"].waitForExistence(timeout: 3))
+    }
+    
+    func testSliceToastPassesAnAccessibilityAudit() throws {
+        app.launch()
+        app.buttons["showToppingSlice"].tap()
+        XCTAssertTrue(app.staticTexts["Group merged"].waitForExistence(timeout: 2))
+        
+        // Contrast is left out: the demo's own plain buttons only nearly pass it.
+        try app.performAccessibilityAudit(for: [.elementDetection, .hitRegion, .sufficientElementDescription, .textClipped])
+    }
 }
